@@ -11,7 +11,10 @@ export default function Welcome() {
   return (
     <Box
       minH="100vh"
-      bg="ink.900"
+      background={
+        "radial-gradient(1000px circle at 15% 0%, rgba(94,156,115,0.18), transparent 55%)," +
+        "radial-gradient(800px circle at 100% 100%, rgba(94,124,138,0.12), transparent 50%), #0F1413"
+      }
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -22,7 +25,8 @@ export default function Welcome() {
         rounded="xl"
         border="1px solid"
         borderColor="whiteAlpha.100"
-        bg="ink.800"
+        bg="rgba(22,28,25,0.55)"
+        backdropFilter="blur(20px) saturate(160%)"
         maxW="440px"
         w="full"
         initial={{ opacity: 0 }}

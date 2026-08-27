@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box, VStack, Text, Divider, Badge } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
+import { motion } from "framer-motion";
 import axios from "axios";
 import {
   FiHome,
@@ -14,6 +15,8 @@ import {
 } from "react-icons/fi";
 import Logo from "./Logo";
 import { API_BASE } from "../api";
+
+const MotionBox = motion(Box);
 
 function countOverdue(records) {
   const today = new Date();
@@ -33,13 +36,19 @@ export default function Sidebar() {
 
   return (
     <Box
-      bg="ink.900"
+      bg="rgba(15,20,19,0.72)"
+      backdropFilter="blur(20px) saturate(150%)"
+      borderRight="1px solid"
+      borderColor="whiteAlpha.100"
       color="white"
       w="240px"
       minH="100vh"
       p={4}
       display="flex"
       flexDirection="column"
+      position="sticky"
+      top={0}
+      alignSelf="flex-start"
     >
       <Box px={1} mb={4}>
         <Logo size={20} markColor="#5E9C73" textProps={{ fontSize: "md" }} />
@@ -85,27 +94,54 @@ function NavItem({ to, icon, label, badge }) {
   return (
     <NavLink to={to}>
       {({ isActive }) => (
-        <Box
+        <MotionBox
+          position="relative"
           display="flex"
           alignItems="center"
           justifyContent="space-between"
           px={3}
           py={2}
           rounded="md"
-          bg={isActive ? "brand.600" : "transparent"}
-          _hover={{ bg: isActive ? "brand.600" : "whiteAlpha.100" }}
-          transition="background 0.15s ease"
+          cursor="pointer"
+          bg="transparent"
+          _hover={{ bg: isActive ? "transparent" : "whiteAlpha.100" }}
+          whileHover={{ x: 2 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
         >
-          <Box display="flex" alignItems="center" gap={3}>
+          {isActive && (
+            <MotionBox
+              layoutId="sidebar-active-pill"
+              position="absolute"
+              inset={0}
+              bg="brand.600"
+              rounded="md"
+              transition={{ type: "spring", stiffness: 500, damping: 38 }}
+              style={{ zIndex: 0 }}
+            />
+          )}
+          <Box
+            position="relative"
+            zIndex={1}
+            display="flex"
+            alignItems="center"
+            gap={3}
+          >
             {icon}
             <Text fontSize="sm">{label}</Text>
           </Box>
           {badge != null && (
-            <Badge colorScheme="red" borderRadius="full" fontSize="10px" px={2}>
+            <Badge
+              position="relative"
+              zIndex={1}
+              colorScheme="red"
+              borderRadius="full"
+              fontSize="10px"
+              px={2}
+            >
               {badge}
             </Badge>
           )}
-        </Box>
+        </MotionBox>
       )}
     </NavLink>
   );

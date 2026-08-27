@@ -20,6 +20,16 @@ function pageTitle(pathname) {
   return PAGE_TITLES[pathname] ?? "Cattle Manager";
 }
 
+const AMBIENT_LIGHT =
+  "radial-gradient(1100px circle at 8% -10%, rgba(63,125,87,0.10), transparent 55%)," +
+  "radial-gradient(900px circle at 100% 10%, rgba(176,134,66,0.08), transparent 50%)," +
+  "#F7F8F7";
+
+const AMBIENT_DARK =
+  "radial-gradient(1100px circle at 8% -10%, rgba(94,156,115,0.14), transparent 55%)," +
+  "radial-gradient(900px circle at 100% 15%, rgba(94,124,138,0.10), transparent 50%)," +
+  "#0F1413";
+
 export default function AppShell({ children }) {
   const { pathname } = useLocation();
   const scrollRef = useRef(null);
@@ -29,17 +39,22 @@ export default function AppShell({ children }) {
   }, [pathname]);
 
   return (
-    <Flex minH="100vh" bg="gray.50" _dark={{ bg: "ink.800" }}>
+    <Flex minH="100vh" background={AMBIENT_LIGHT} _dark={{ background: AMBIENT_DARK }}>
       <Sidebar />
 
-      <Box ref={scrollRef} flex="1" overflowY="auto">
+      <Box ref={scrollRef} flex="1" overflowY="auto" position="relative">
         <HStack
           justify="space-between"
           px={8}
           py={5}
+          position="sticky"
+          top={0}
+          zIndex={10}
+          bg="rgba(247,248,247,0.7)"
+          _dark={{ bg: "rgba(15,20,19,0.6)", borderColor: "whiteAlpha.100" }}
+          backdropFilter="blur(14px) saturate(160%)"
           borderBottom="1px solid"
           borderColor="blackAlpha.100"
-          _dark={{ borderColor: "whiteAlpha.100" }}
         >
           <Heading size="md">{pageTitle(pathname)}</Heading>
           <ColorModeToggle />

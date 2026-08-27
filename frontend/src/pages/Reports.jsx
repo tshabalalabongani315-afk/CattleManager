@@ -5,8 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
 import { API_BASE } from "../api";
-
-const COLORS = ["#3F7D57", "#8E953F", "#B08642", "#5C7A8A", "#8A5C4E", "#6E6A8A"];
+import { BREED_COLORS as COLORS } from "../utils/colors";
 
 export default function Reports() {
   const [data, setData] = useState([]);
