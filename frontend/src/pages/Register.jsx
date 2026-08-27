@@ -18,6 +18,7 @@ import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
 import { API_BASE } from "../api";
+import { downloadCSV } from "../utils/csv";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -71,6 +72,17 @@ export default function Register() {
     );
   }, [cattle, search]);
 
+  const exportCSV = () => {
+    downloadCSV(
+      "cattle-register.csv",
+      [
+        { key: "tag", label: "Tag" },
+        { key: "breed", label: "Breed" },
+      ],
+      filtered
+    );
+  };
+
   return (
     <PageTransition>
       <VStack spacing={6} align="stretch">
@@ -97,15 +109,20 @@ export default function Register() {
         </Card>
 
         <Card>
-          <HStack justify="space-between" mb={4}>
+          <HStack justify="space-between" mb={4} flexWrap="wrap" gap={3}>
             <Heading size="md">Registered Cattle</Heading>
-            <Input
-              placeholder="Search tag or breed…"
-              size="sm"
-              maxW="240px"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <HStack>
+              <Input
+                placeholder="Search tag or breed…"
+                size="sm"
+                maxW="240px"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Button size="sm" onClick={exportCSV} isDisabled={filtered.length === 0}>
+                Export CSV
+              </Button>
+            </HStack>
           </HStack>
 
           {filtered.length === 0 ? (
