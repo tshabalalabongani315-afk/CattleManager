@@ -23,10 +23,10 @@ app.get("/cattle/:id", async (req, res) => {
 
 // Add cattle
 app.post("/cattle", async (req, res) => {
-  const { tag, breed } = req.body;
+  const { tag, breed, sex, date_of_birth, status } = req.body;
   await db.run(
-    "INSERT INTO cattle (tag, breed) VALUES (?, ?)",
-    [tag, breed]
+    "INSERT INTO cattle (tag, breed, sex, date_of_birth, status) VALUES (?, ?, ?, ?, ?)",
+    [tag, breed, sex || null, date_of_birth || null, status || "Active"]
   );
   res.sendStatus(201);
 });
@@ -57,14 +57,21 @@ app.listen(4000, () =>
   console.log("Backend running on http://localhost:4000")
 );
 
-// Update cattle
+// Update cattle (merges with existing record so partial edits don't wipe other fields)
 app.put("/cattle/:id", async (req, res) => {
-  const { tag, breed } = req.body;
   const { id } = req.params;
+  const current = await db.get("SELECT * FROM cattle WHERE id = ?", [id]);
+  if (!current) return res.sendStatus(404);
+
+  const tag = req.body.tag ?? current.tag;
+  const breed = req.body.breed ?? current.breed;
+  const sex = req.body.sex ?? current.sex;
+  const date_of_birth = req.body.date_of_birth ?? current.date_of_birth;
+  const status = req.body.status ?? current.status;
 
   await db.run(
-    "UPDATE cattle SET tag = ?, breed = ? WHERE id = ?",
-    [tag, breed, id]
+    "UPDATE cattle SET tag = ?, breed = ?, sex = ?, date_of_birth = ?, status = ? WHERE id = ?",
+    [tag, breed, sex, date_of_birth, status, id]
   );
 
   res.json({ success: true });

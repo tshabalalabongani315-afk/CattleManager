@@ -20,6 +20,17 @@ await db.exec(`
   );
 `);
 
+const cattleColumns = (await db.all("PRAGMA table_info(cattle)")).map((c) => c.name);
+if (!cattleColumns.includes("sex")) {
+  await db.exec("ALTER TABLE cattle ADD COLUMN sex TEXT");
+}
+if (!cattleColumns.includes("date_of_birth")) {
+  await db.exec("ALTER TABLE cattle ADD COLUMN date_of_birth TEXT");
+}
+if (!cattleColumns.includes("status")) {
+  await db.exec("ALTER TABLE cattle ADD COLUMN status TEXT DEFAULT 'Active'");
+}
+
 await db.exec(`
   CREATE TABLE IF NOT EXISTS movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

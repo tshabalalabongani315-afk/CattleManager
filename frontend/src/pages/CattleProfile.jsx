@@ -17,6 +17,8 @@ import PageTransition from "../components/PageTransition";
 import VaccinationHistory from "../components/VaccinationHistory";
 import WeightHistory from "../components/WeightHistory";
 import { API_BASE } from "../api";
+import { formatAge } from "../utils/age";
+import { STATUS_COLORS } from "../utils/colors";
 
 export default function CattleProfile() {
   const { id } = useParams();
@@ -102,9 +104,14 @@ export default function CattleProfile() {
                 <HStack>
                   <Heading size="lg">{animal.tag}</Heading>
                   <Badge colorScheme="brand">{animal.breed}</Badge>
+                  <Badge colorScheme={STATUS_COLORS[animal.status] || "gray"}>
+                    {animal.status || "Active"}
+                  </Badge>
                 </HStack>
                 <Text color="gray.500" fontSize="sm">
                   Animal #{animal.id}
+                  {animal.sex && ` · ${animal.sex}`}
+                  {formatAge(animal.date_of_birth) && ` · ${formatAge(animal.date_of_birth)} old`}
                 </Text>
               </VStack>
               <HStack>
