@@ -30,5 +30,16 @@ await db.exec(`
   )
 `);
 
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS vaccinations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cattle_id INTEGER NOT NULL,
+    vaccine_name TEXT NOT NULL,
+    date_given TEXT NOT NULL,
+    next_due_date TEXT,
+    notes TEXT,
+    FOREIGN KEY (cattle_id) REFERENCES cattle(id)
+  )
+`);
 
 export default db;

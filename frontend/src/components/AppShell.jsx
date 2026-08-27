@@ -9,6 +9,7 @@ const PAGE_TITLES = {
   "/register": "Register",
   "/daily-counts": "Daily Counts",
   "/movements": "Movements",
+  "/vaccinations": "Vaccinations",
   "/reports": "Reports",
   "/herd": "Herd Status",
   "/settings": "Settings",

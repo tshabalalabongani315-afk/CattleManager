@@ -13,6 +13,7 @@ import DailyCounts from "./pages/DailyCounts";
 import HerdStatus from "./pages/HerdStatus";
 import Movements from "./pages/Movements";
 import CattleProfile from "./pages/CattleProfile";
+import Vaccinations from "./pages/Vaccinations";
 
 function Protected({ children }) {
   return (
@@ -58,6 +59,14 @@ export default function App() {
           element={
             <Protected>
               <DailyCounts />
+            </Protected>
+          }
+        />
+        <Route
+          path="/vaccinations"
+          element={
+            <Protected>
+              <Vaccinations />
             </Protected>
           }
         />

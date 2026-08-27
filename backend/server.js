@@ -104,4 +104,46 @@ app.delete("/movements/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+/* ---- VACCINATIONS ---- */
+
+// Get vaccinations (all, or filtered by cattle_id), joined with tag for display
+app.get("/vaccinations", async (req, res) => {
+  const { cattle_id } = req.query;
+
+  const rows = cattle_id
+    ? await db.all(
+        `SELECT vaccinations.*, cattle.tag AS cattle_tag FROM vaccinations
+         JOIN cattle ON cattle.id = vaccinations.cattle_id
+         WHERE vaccinations.cattle_id = ?
+         ORDER BY date_given DESC`,
+        [cattle_id]
+      )
+    : await db.all(
+        `SELECT vaccinations.*, cattle.tag AS cattle_tag FROM vaccinations
+         JOIN cattle ON cattle.id = vaccinations.cattle_id
+         ORDER BY next_due_date IS NULL, next_due_date ASC`
+      );
+
+  res.json(rows);
+});
+
+// Add vaccination record
+app.post("/vaccinations", async (req, res) => {
+  const { cattle_id, vaccine_name, date_given, next_due_date, notes } = req.body;
+
+  await db.run(
+    `INSERT INTO vaccinations (cattle_id, vaccine_name, date_given, next_due_date, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    [cattle_id, vaccine_name, date_given, next_due_date || null, notes || null]
+  );
+
+  res.sendStatus(201);
+});
+
+// Delete vaccination record
+app.delete("/vaccinations/:id", async (req, res) => {
+  await db.run("DELETE FROM vaccinations WHERE id = ?", [req.params.id]);
+  res.json({ success: true });
+});
+
 

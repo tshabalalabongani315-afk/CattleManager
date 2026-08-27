@@ -14,6 +14,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
+import VaccinationHistory from "../components/VaccinationHistory";
 import { API_BASE } from "../api";
 
 export default function CattleProfile() {
@@ -118,12 +119,7 @@ export default function CattleProfile() {
         </Card>
 
         <Card>
-          <Heading size="sm" mb={2}>
-            Vaccination History
-          </Heading>
-          <Text color="gray.500" fontSize="sm">
-            No vaccination records yet.
-          </Text>
+          <VaccinationHistory cattleId={id} />
         </Card>
 
         <Card>
