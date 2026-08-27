@@ -146,4 +146,34 @@ app.delete("/vaccinations/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+/* ---- WEIGHTS ---- */
+
+// Get weight records for an animal
+app.get("/weights", async (req, res) => {
+  const { cattle_id } = req.query;
+  const rows = await db.all(
+    "SELECT * FROM weights WHERE cattle_id = ? ORDER BY date ASC",
+    [cattle_id]
+  );
+  res.json(rows);
+});
+
+// Add weight record
+app.post("/weights", async (req, res) => {
+  const { cattle_id, date, weight_kg } = req.body;
+
+  await db.run(
+    "INSERT INTO weights (cattle_id, date, weight_kg) VALUES (?, ?, ?)",
+    [cattle_id, date, weight_kg]
+  );
+
+  res.sendStatus(201);
+});
+
+// Delete weight record
+app.delete("/weights/:id", async (req, res) => {
+  await db.run("DELETE FROM weights WHERE id = ?", [req.params.id]);
+  res.json({ success: true });
+});
+
 

@@ -15,6 +15,7 @@ import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
 import VaccinationHistory from "../components/VaccinationHistory";
+import WeightHistory from "../components/WeightHistory";
 import { API_BASE } from "../api";
 
 export default function CattleProfile() {
@@ -123,12 +124,7 @@ export default function CattleProfile() {
         </Card>
 
         <Card>
-          <Heading size="sm" mb={2}>
-            Weight History
-          </Heading>
-          <Text color="gray.500" fontSize="sm">
-            No weight records yet.
-          </Text>
+          <WeightHistory cattleId={id} />
         </Card>
       </VStack>
     </PageTransition>

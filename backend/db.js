@@ -42,4 +42,14 @@ await db.exec(`
   )
 `);
 
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cattle_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    FOREIGN KEY (cattle_id) REFERENCES cattle(id)
+  )
+`);
+
 export default db;
