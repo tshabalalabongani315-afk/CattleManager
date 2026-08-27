@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import DailyCounts from "./pages/DailyCounts";
 import HerdStatus from "./pages/HerdStatus";
 import Movements from "./pages/Movements";
+import CattleProfile from "./pages/CattleProfile";
 
 function Protected({ children }) {
   return (
@@ -41,6 +42,14 @@ export default function App() {
           element={
             <Protected>
               <Register />
+            </Protected>
+          }
+        />
+        <Route
+          path="/cattle/:id"
+          element={
+            <Protected>
+              <CattleProfile />
             </Protected>
           }
         />

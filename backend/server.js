@@ -14,6 +14,13 @@ app.get("/cattle", async (req, res) => {
   res.json(cattle);
 });
 
+// Get single cattle
+app.get("/cattle/:id", async (req, res) => {
+  const animal = await db.get("SELECT * FROM cattle WHERE id = ?", [req.params.id]);
+  if (!animal) return res.sendStatus(404);
+  res.json(animal);
+});
+
 // Add cattle
 app.post("/cattle", async (req, res) => {
   const { tag, breed } = req.body;

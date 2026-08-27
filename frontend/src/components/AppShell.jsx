@@ -14,6 +14,11 @@ const PAGE_TITLES = {
   "/settings": "Settings",
 };
 
+function pageTitle(pathname) {
+  if (pathname.startsWith("/cattle/")) return "Animal Profile";
+  return PAGE_TITLES[pathname] ?? "Cattle Manager";
+}
+
 export default function AppShell({ children }) {
   const { pathname } = useLocation();
   const scrollRef = useRef(null);
@@ -35,7 +40,7 @@ export default function AppShell({ children }) {
           borderColor="blackAlpha.100"
           _dark={{ borderColor: "whiteAlpha.100" }}
         >
-          <Heading size="md">{PAGE_TITLES[pathname] ?? "Cattle Manager"}</Heading>
+          <Heading size="md">{pageTitle(pathname)}</Heading>
           <ColorModeToggle />
         </HStack>
 
