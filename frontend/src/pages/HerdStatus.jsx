@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
 import { Heading, Text, HStack, VStack, Badge } from "@chakra-ui/react";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 
 export default function HerdStatus() {
   const [registered, setRegistered] = useState(null);
   const [latestCount, setLatestCount] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/cattle`).then((res) => setRegistered(res.data.length));
-    axios
-      .get(`${API_BASE}/daily-counts`)
-      .then((res) => setLatestCount(res.data[0] ?? null));
+    api.get("/cattle").then((res) => setRegistered(res.data.length));
+    api.get("/daily-counts").then((res) => setLatestCount(res.data[0] ?? null));
   }, []);
 
   const loading = registered === null || latestCount === undefined;

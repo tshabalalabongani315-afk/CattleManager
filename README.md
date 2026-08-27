@@ -21,6 +21,7 @@ Two terminals — one for each side:
 ```bash
 cd backend
 npm install
+cp .env.example .env   # set JWT_SECRET to a real random value
 npm start
 ```
 
@@ -34,12 +35,13 @@ The backend runs on `http://localhost:4000`, the frontend on `http://localhost:5
 
 ## Current limitations
 
-- **Login is a role picker, not authentication.** Choosing "Farm Owner" or "Farm Worker" just stores that role in `localStorage` — there's no password or server-side session. Don't put real access control on it as-is.
-- **No input validation on the API.** The backend trusts request bodies as given.
+- **Sign-up is open.** Anyone with the app URL can create an account (`/signup`) — there's no invite/approval step, which is fine for a single-farm deployment but not a public one.
+- **No input validation on the API.** The backend trusts request bodies as given, beyond the auth endpoints' own checks.
 - **No cascading delete.** Deleting an animal from the Register does not remove its vaccination or weight history rows — they're orphaned rather than cleaned up.
 
 ## Features
 
+- **Authentication** — real sign-up/login (bcrypt-hashed passwords, JWT sessions); every API endpoint requires a valid login
 - **Dashboard** — live snapshot: registered cattle count, latest kraal count, recent movements, and a vaccinations-due alert card
 - **Register** — add, edit, delete, and search cattle by tag or breed, with CSV export; click a row to open that animal's profile
 - **Animal Profile** (`/cattle/:id`) — one page per animal with its details plus full vaccination and weight history

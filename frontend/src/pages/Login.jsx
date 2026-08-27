@@ -1,7 +1,9 @@
-import { Box, Button, Heading, Stack, Text } from "@chakra-ui/react";
+import { useState } from "react";
+import { Box, Button, Heading, Input, Stack, Text, Link } from "@chakra-ui/react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../api";
 
 const MotionBox = motion(Box);
 
@@ -9,9 +11,26 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (role) => {
-    login(role);
-    navigate("/dashboard", { replace: true });
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) return;
+
+    setError("");
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/login", { username, password });
+      login(res.data.token, res.data.user);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.error || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,6 +46,8 @@ export default function Login() {
       px={4}
     >
       <MotionBox
+        as="form"
+        onSubmit={handleSubmit}
         bg="rgba(22,28,25,0.55)"
         backdropFilter="blur(20px) saturate(160%)"
         border="1px solid"
@@ -43,23 +64,38 @@ export default function Login() {
           <Heading size="md" textAlign="center">
             Sign in
           </Heading>
-          <Text fontSize="sm" color="whiteAlpha.600" textAlign="center" mb={2}>
-            Choose your role to continue
-          </Text>
 
-          <Button colorScheme="brand" onClick={() => handleLogin("owner")}>
-            Farm Owner
-          </Button>
-
-          <Button
-            variant="outline"
-            color="whiteAlpha.900"
+          <Input
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             borderColor="whiteAlpha.300"
-            _hover={{ bg: "whiteAlpha.100" }}
-            onClick={() => handleLogin("worker")}
-          >
-            Farm Worker
+            autoFocus
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            borderColor="whiteAlpha.300"
+          />
+
+          {error && (
+            <Text fontSize="sm" color="red.300">
+              {error}
+            </Text>
+          )}
+
+          <Button type="submit" colorScheme="brand" isLoading={loading}>
+            Sign in
           </Button>
+
+          <Text fontSize="sm" color="whiteAlpha.600" textAlign="center">
+            Don&apos;t have an account?{" "}
+            <Link as={RouterLink} to="/signup" color="brand.400">
+              Sign up
+            </Link>
+          </Text>
         </Stack>
       </MotionBox>
     </Box>

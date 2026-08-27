@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, VStack, Text, Divider, Badge } from "@chakra-ui/react";
-import { NavLink } from "react-router-dom";
+import { Box, VStack, HStack, Text, Divider, Badge, Icon } from "@chakra-ui/react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import axios from "axios";
 import {
   FiHome,
   FiList,
@@ -12,9 +11,11 @@ import {
   FiClipboard,
   FiUsers,
   FiSettings,
+  FiLogOut,
 } from "react-icons/fi";
 import Logo from "./Logo";
-import { API_BASE } from "../api";
+import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 
 const MotionBox = motion(Box);
 
@@ -26,13 +27,20 @@ function countOverdue(records) {
 
 export default function Sidebar() {
   const [overdueCount, setOverdueCount] = useState(0);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/vaccinations`)
+    api
+      .get("/vaccinations")
       .then((res) => setOverdueCount(countOverdue(res.data)))
       .catch(() => {});
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <Box
@@ -77,6 +85,36 @@ export default function Sidebar() {
 
         <Section title="SYSTEM" />
         <NavItem to="/settings" icon={<FiSettings />} label="Settings" />
+      </VStack>
+
+      <Divider my={3} borderColor="whiteAlpha.200" />
+
+      <VStack align="stretch" spacing={2} px={1}>
+        {user && (
+          <Box>
+            <Text fontSize="sm" fontWeight="medium" noOfLines={1}>
+              {user.username}
+            </Text>
+            <Text fontSize="xs" color="whiteAlpha.500" textTransform="capitalize">
+              {user.role}
+            </Text>
+          </Box>
+        )}
+        <HStack
+          as="button"
+          onClick={handleLogout}
+          spacing={3}
+          px={3}
+          py={2}
+          rounded="md"
+          cursor="pointer"
+          color="whiteAlpha.700"
+          _hover={{ bg: "whiteAlpha.100", color: "white" }}
+          transition="background 0.15s ease"
+        >
+          <Icon as={FiLogOut} />
+          <Text fontSize="sm">Log out</Text>
+        </HStack>
       </VStack>
     </Box>
   );

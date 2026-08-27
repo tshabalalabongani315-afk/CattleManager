@@ -13,10 +13,9 @@ import {
   Th,
   Td,
 } from "@chakra-ui/react";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 
 export default function Movements() {
   const [movements, setMovements] = useState([]);
@@ -26,7 +25,7 @@ export default function Movements() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   const load = async () => {
-    const res = await axios.get(`${API_BASE}/movements`);
+    const res = await api.get("/movements");
     setMovements(res.data);
   };
 
@@ -37,7 +36,7 @@ export default function Movements() {
   const save = async () => {
     if (!quantity) return alert("Enter quantity");
 
-    await axios.post(`${API_BASE}/movements`, { type, quantity, note, date });
+    await api.post("/movements", { type, quantity, note, date });
 
     setQuantity("");
     setNote("");
@@ -46,7 +45,7 @@ export default function Movements() {
 
   const remove = async (id) => {
     if (!confirm("Delete record?")) return;
-    await axios.delete(`${API_BASE}/movements/${id}`);
+    await api.delete(`/movements/${id}`);
     load();
   };
 

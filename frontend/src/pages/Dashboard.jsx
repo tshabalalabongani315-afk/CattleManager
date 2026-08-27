@@ -14,10 +14,9 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import { FiList, FiBarChart2, FiRepeat, FiActivity } from "react-icons/fi";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 import { dueStatus } from "../utils/vaccinations";
 import { BREED_COLORS } from "../utils/colors";
 
@@ -48,12 +47,10 @@ export default function Dashboard() {
   const [vaccinations, setVaccinations] = useState([]);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/cattle`).then((res) => setCattle(res.data));
-    axios
-      .get(`${API_BASE}/daily-counts`)
-      .then((res) => setLatestCount(res.data[0] ?? null));
-    axios.get(`${API_BASE}/movements`).then((res) => setMovements(res.data));
-    axios.get(`${API_BASE}/vaccinations`).then((res) => setVaccinations(res.data));
+    api.get("/cattle").then((res) => setCattle(res.data));
+    api.get("/daily-counts").then((res) => setLatestCount(res.data[0] ?? null));
+    api.get("/movements").then((res) => setMovements(res.data));
+    api.get("/vaccinations").then((res) => setVaccinations(res.data));
   }, []);
 
   const recentMovements = movements.slice(0, 5);

@@ -1,10 +1,84 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import db from "./db.js";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.warn(
+    "WARNING: JWT_SECRET is not set. Copy backend/.env.example to backend/.env and set a real secret."
+  );
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+/* ---- AUTH (public) ---- */
+
+app.post("/auth/signup", async (req, res) => {
+  const { username, password, role } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username and password are required" });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
+  }
+
+  const existing = await db.get("SELECT id FROM users WHERE username = ?", [username]);
+  if (existing) {
+    return res.status(409).json({ error: "That username is already taken" });
+  }
+
+  const password_hash = await bcrypt.hash(password, 10);
+  await db.run(
+    "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+    [username, password_hash, role === "owner" ? "owner" : "worker"]
+  );
+
+  res.sendStatus(201);
+});
+
+app.post("/auth/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  const user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
+  if (!user) return res.status(401).json({ error: "Invalid username or password" });
+
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) return res.status(401).json({ error: "Invalid username or password" });
+
+  const token = jwt.sign(
+    { sub: user.id, username: user.username, role: user.role },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({
+    token,
+    user: { id: user.id, username: user.username, role: user.role },
+  });
+});
+
+/* ---- everything below requires a valid login ---- */
+
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.sendStatus(401);
+
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.sendStatus(401);
+  }
+}
+
+app.use(requireAuth);
 
 /* ---- CATTLE REGISTER ---- */
 
@@ -30,32 +104,6 @@ app.post("/cattle", async (req, res) => {
   );
   res.sendStatus(201);
 });
-
-/* ---- DAILY COUNTS ---- */
-
-// Get counts
-app.get("/daily-counts", async (req, res) => {
-  const rows = await db.all(
-    "SELECT * FROM daily_counts ORDER BY id DESC"
-  );
-  res.json(rows);
-});
-
-// Add count
-app.post("/daily-counts", async (req, res) => {
-  const { count } = req.body;
-  const date = new Date().toLocaleDateString();
-
-  await db.run(
-    "INSERT INTO daily_counts (date, count) VALUES (?, ?)",
-    [date, count]
-  );
-  res.sendStatus(201);
-});
-
-app.listen(4000, () =>
-  console.log("Backend running on http://localhost:4000")
-);
 
 // Update cattle (merges with existing record so partial edits don't wipe other fields)
 app.put("/cattle/:id", async (req, res) => {
@@ -83,6 +131,28 @@ app.delete("/cattle/:id", async (req, res) => {
 
   await db.run("DELETE FROM cattle WHERE id = ?", [id]);
   res.json({ success: true });
+});
+
+/* ---- DAILY COUNTS ---- */
+
+// Get counts
+app.get("/daily-counts", async (req, res) => {
+  const rows = await db.all(
+    "SELECT * FROM daily_counts ORDER BY id DESC"
+  );
+  res.json(rows);
+});
+
+// Add count
+app.post("/daily-counts", async (req, res) => {
+  const { count } = req.body;
+  const date = new Date().toLocaleDateString();
+
+  await db.run(
+    "INSERT INTO daily_counts (date, count) VALUES (?, ?)",
+    [date, count]
+  );
+  res.sendStatus(201);
 });
 
 // Get all daily movements
@@ -183,4 +253,6 @@ app.delete("/weights/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-
+app.listen(4000, () =>
+  console.log("Backend running on http://localhost:4000")
+);

@@ -11,12 +11,11 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { FiArrowLeft } from "react-icons/fi";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
 import VaccinationHistory from "../components/VaccinationHistory";
 import WeightHistory from "../components/WeightHistory";
-import { API_BASE } from "../api";
+import { api } from "../api";
 import { formatAge } from "../utils/age";
 import { STATUS_COLORS } from "../utils/colors";
 
@@ -32,7 +31,7 @@ export default function CattleProfile() {
 
   const load = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/cattle/${id}`);
+      const res = await api.get(`/cattle/${id}`);
       setAnimal(res.data);
       setTag(res.data.tag);
       setBreed(res.data.breed);
@@ -47,14 +46,14 @@ export default function CattleProfile() {
 
   const save = async () => {
     if (!tag || !breed) return alert("Fill all fields");
-    await axios.put(`${API_BASE}/cattle/${id}`, { tag, breed });
+    await api.put(`/cattle/${id}`, { tag, breed });
     setEditing(false);
     load();
   };
 
   const remove = async () => {
     if (!confirm("Delete this animal? This cannot be undone.")) return;
-    await axios.delete(`${API_BASE}/cattle/${id}`);
+    await api.delete(`/cattle/${id}`);
     navigate("/register");
   };
 

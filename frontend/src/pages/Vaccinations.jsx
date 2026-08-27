@@ -13,10 +13,9 @@ import {
   Button,
   Link,
 } from "@chakra-ui/react";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 import { downloadCSV } from "../utils/csv";
 import { dueStatus } from "../utils/vaccinations";
 
@@ -24,7 +23,7 @@ export default function Vaccinations() {
   const [records, setRecords] = useState([]);
 
   const load = () => {
-    axios.get(`${API_BASE}/vaccinations`).then((res) => setRecords(res.data));
+    api.get("/vaccinations").then((res) => setRecords(res.data));
   };
 
   useEffect(() => {

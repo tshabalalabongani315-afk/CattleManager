@@ -18,10 +18,9 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { FiChevronUp, FiChevronDown } from "react-icons/fi";
-import axios from "axios";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 import { downloadCSV } from "../utils/csv";
 import { formatAge } from "../utils/age";
 import { STATUS_COLORS } from "../utils/colors";
@@ -45,7 +44,7 @@ export default function Register() {
   const [page, setPage] = useState(1);
 
   const load = async () => {
-    const res = await axios.get(`${API_BASE}/cattle`);
+    const res = await api.get("/cattle");
     setCattle(res.data);
   };
 
@@ -72,9 +71,9 @@ export default function Register() {
     const payload = { tag, breed, sex: sex || null, date_of_birth: dateOfBirth || null, status };
 
     if (editId) {
-      await axios.put(`${API_BASE}/cattle/${editId}`, payload);
+      await api.put(`/cattle/${editId}`, payload);
     } else {
-      await axios.post(`${API_BASE}/cattle`, payload);
+      await api.post("/cattle", payload);
     }
 
     resetForm();
@@ -92,7 +91,7 @@ export default function Register() {
 
   const remove = async (id) => {
     if (!confirm("Delete this cattle?")) return;
-    await axios.delete(`${API_BASE}/cattle/${id}`);
+    await api.delete(`/cattle/${id}`);
     load();
   };
 

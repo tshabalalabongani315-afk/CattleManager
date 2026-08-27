@@ -5,6 +5,7 @@ import AppShell from "./components/AppShell";
 
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Register from "./pages/Register";
 import Reports from "./pages/Reports";
@@ -29,6 +30,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
         <Route
           path="/dashboard"

@@ -13,8 +13,7 @@ import {
   Th,
   Td,
 } from "@chakra-ui/react";
-import axios from "axios";
-import { API_BASE } from "../api";
+import { api } from "../api";
 
 export default function VaccinationHistory({ cattleId }) {
   const [records, setRecords] = useState([]);
@@ -24,8 +23,8 @@ export default function VaccinationHistory({ cattleId }) {
   const [notes, setNotes] = useState("");
 
   const load = () => {
-    axios
-      .get(`${API_BASE}/vaccinations`, { params: { cattle_id: cattleId } })
+    api
+      .get("/vaccinations", { params: { cattle_id: cattleId } })
       .then((res) => setRecords(res.data));
   };
 
@@ -36,7 +35,7 @@ export default function VaccinationHistory({ cattleId }) {
   const save = async () => {
     if (!vaccineName || !dateGiven) return alert("Vaccine name and date given are required");
 
-    await axios.post(`${API_BASE}/vaccinations`, {
+    await api.post("/vaccinations", {
       cattle_id: cattleId,
       vaccine_name: vaccineName,
       date_given: dateGiven,
@@ -52,7 +51,7 @@ export default function VaccinationHistory({ cattleId }) {
 
   const remove = async (id) => {
     if (!confirm("Delete this vaccination record?")) return;
-    await axios.delete(`${API_BASE}/vaccinations/${id}`);
+    await api.delete(`/vaccinations/${id}`);
     load();
   };
 

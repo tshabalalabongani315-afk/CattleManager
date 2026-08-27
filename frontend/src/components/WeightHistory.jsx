@@ -15,8 +15,7 @@ import {
   Box,
 } from "@chakra-ui/react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
-import axios from "axios";
-import { API_BASE } from "../api";
+import { api } from "../api";
 
 export default function WeightHistory({ cattleId }) {
   const [records, setRecords] = useState([]);
@@ -24,9 +23,7 @@ export default function WeightHistory({ cattleId }) {
   const [weight, setWeight] = useState("");
 
   const load = () => {
-    axios
-      .get(`${API_BASE}/weights`, { params: { cattle_id: cattleId } })
-      .then((res) => setRecords(res.data));
+    api.get("/weights", { params: { cattle_id: cattleId } }).then((res) => setRecords(res.data));
   };
 
   useEffect(() => {
@@ -36,7 +33,7 @@ export default function WeightHistory({ cattleId }) {
   const save = async () => {
     if (!weight) return alert("Enter a weight");
 
-    await axios.post(`${API_BASE}/weights`, {
+    await api.post("/weights", {
       cattle_id: cattleId,
       date,
       weight_kg: Number(weight),
@@ -48,7 +45,7 @@ export default function WeightHistory({ cattleId }) {
 
   const remove = async (id) => {
     if (!confirm("Delete this weight record?")) return;
-    await axios.delete(`${API_BASE}/weights/${id}`);
+    await api.delete(`/weights/${id}`);
     load();
   };
 

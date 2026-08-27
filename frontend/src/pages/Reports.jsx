@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { Heading, Text } from "@chakra-ui/react";
-import axios from "axios";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 import { BREED_COLORS as COLORS } from "../utils/colors";
 
 export default function Reports() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/cattle`).then((res) => {
+    api.get("/cattle").then((res) => {
       const grouped = {};
       res.data.forEach((c) => {
         grouped[c.breed] = (grouped[c.breed] || 0) + 1;

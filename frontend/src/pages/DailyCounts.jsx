@@ -2,25 +2,21 @@ import { useEffect, useState } from "react";
 import { Input, Button, Text, Stack, Heading } from "@chakra-ui/react";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { API_BASE } from "../api";
+import { api } from "../api";
 
 export default function DailyCounts() {
   const [count, setCount] = useState("");
   const [records, setRecords] = useState([]);
 
   const loadCounts = async () => {
-    const res = await fetch(`${API_BASE}/daily-counts`);
-    setRecords(await res.json());
+    const res = await api.get("/daily-counts");
+    setRecords(res.data);
   };
 
   const submit = async () => {
     if (!count) return;
 
-    await fetch(`${API_BASE}/daily-counts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ count }),
-    });
+    await api.post("/daily-counts", { count });
 
     setCount("");
     loadCounts();
