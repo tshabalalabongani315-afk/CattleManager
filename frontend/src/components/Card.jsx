@@ -4,14 +4,12 @@ export default function Card({ children, ...props }) {
   return (
     <Box
       bg="white"
-      _dark={{ bg: "gray.800" }}
+      _dark={{ bg: "ink.700", borderColor: "whiteAlpha.100" }}
       p="6"
-      borderRadius="2xl"
-      boxShadow="md"
-      transition="all 0.2s ease"
-      _hover={{
-        boxShadow: "lg",
-      }}
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="blackAlpha.100"
+      boxShadow="sm"
       {...props}
     >
       {children}

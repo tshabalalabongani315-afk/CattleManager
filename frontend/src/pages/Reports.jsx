@@ -6,7 +6,7 @@ import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
 import { API_BASE } from "../api";
 
-const COLORS = ["#38A169", "#3182CE", "#DD6B20", "#805AD5", "#D53F8C", "#319795"];
+const COLORS = ["#3F7D57", "#8E953F", "#B08642", "#5C7A8A", "#8A5C4E", "#6E6A8A"];
 
 export default function Reports() {
   const [data, setData] = useState([]);

@@ -78,7 +78,7 @@ export default function Register() {
               value={breed}
               onChange={(e) => setBreed(e.target.value)}
             />
-            <Button colorScheme="green" w="full" onClick={save}>
+            <Button colorScheme="brand" w="full" onClick={save}>
               {editId ? "Update" : "Save"}
             </Button>
           </VStack>

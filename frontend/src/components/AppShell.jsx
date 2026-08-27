@@ -23,7 +23,7 @@ export default function AppShell({ children }) {
   }, [pathname]);
 
   return (
-    <Flex minH="100vh" bg="gray.50" _dark={{ bg: "gray.900" }}>
+    <Flex minH="100vh" bg="gray.50" _dark={{ bg: "ink.800" }}>
       <Sidebar />
 
       <Box ref={scrollRef} flex="1" overflowY="auto">

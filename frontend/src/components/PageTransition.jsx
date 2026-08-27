@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 10,
+    y: 4,
   },
   animate: {
     opacity: 1,
@@ -11,7 +11,7 @@ const pageVariants = {
   },
   exit: {
     opacity: 0,
-    y: -10,
+    y: -4,
   },
 };
 
@@ -22,7 +22,7 @@ export default function PageTransition({ children }) {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={{ duration: 0.25, ease: "easeOut" }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       style={{ height: "100%" }}
     >
       {children}

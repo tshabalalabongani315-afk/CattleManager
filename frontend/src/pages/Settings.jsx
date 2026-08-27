@@ -77,7 +77,7 @@ export default function Settings() {
             <HStack justify="space-between">
               <Text>Enable Notifications</Text>
               <Switch
-                colorScheme="green"
+                colorScheme="brand"
                 isChecked={settings.enableNotifications}
                 onChange={(e) =>
                   setSettings({ ...settings, enableNotifications: e.target.checked })
@@ -88,7 +88,7 @@ export default function Settings() {
             <HStack justify="space-between">
               <Text>Automatic Backup</Text>
               <Switch
-                colorScheme="green"
+                colorScheme="brand"
                 isChecked={settings.autoBackup}
                 onChange={(e) =>
                   setSettings({ ...settings, autoBackup: e.target.checked })
@@ -105,12 +105,12 @@ export default function Settings() {
               <Switch
                 isChecked={colorMode === "dark"}
                 onChange={toggleColorMode}
-                colorScheme="green"
+                colorScheme="brand"
               />
             </HStack>
           </Section>
 
-          <Button colorScheme="green" alignSelf="flex-end" onClick={save}>
+          <Button colorScheme="brand" alignSelf="flex-end" onClick={save}>
             Save Settings
           </Button>
         </VStack>

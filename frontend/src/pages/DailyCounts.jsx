@@ -44,7 +44,7 @@ export default function DailyCounts() {
             value={count}
             onChange={(e) => setCount(e.target.value)}
           />
-          <Button colorScheme="green" onClick={submit} alignSelf="flex-start">
+          <Button colorScheme="brand" onClick={submit} alignSelf="flex-start">
             Save Count
           </Button>
 

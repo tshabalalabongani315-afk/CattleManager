@@ -1,56 +1,49 @@
-import {
-  Box,
-  Button,
-  Heading,
-  Stack,
-  Text,
-  useColorModeValue,
-} from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import Logo from "../components/Logo";
 
 const MotionBox = motion(Box);
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const cardBg = useColorModeValue(
-    "rgba(255,255,255,0.85)",
-    "rgba(26,32,44,0.85)"
-  );
 
   return (
     <Box
       minH="100vh"
-      bgGradient="linear(to-br, green.400, green.600, teal.600)"
+      bg="ink.900"
       display="flex"
       alignItems="center"
       justifyContent="center"
+      px={4}
     >
       <MotionBox
         p={10}
-        rounded="2xl"
-        shadow="2xl"
-        bg={cardBg}
-        backdropFilter="blur(14px)"
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
+        rounded="xl"
+        border="1px solid"
+        borderColor="whiteAlpha.100"
+        bg="ink.800"
+        maxW="440px"
+        w="full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <Stack spacing={6} textAlign="center">
-          <Heading size="xl">🐄 Cattle Manager</Heading>
+        <Stack spacing={6} textAlign="center" color="whiteAlpha.900">
+          <Box alignSelf="center">
+            <Logo size={30} markColor="#5E9C73" textProps={{ fontSize: "xl", color: "white" }} />
+          </Box>
 
-          <Text fontSize="md" color="gray.600">
-            Intelligent herd management for modern farms
+          <Text fontSize="sm" color="whiteAlpha.600">
+            Herd records, vaccinations, and compliance — in one place.
           </Text>
 
           <Button
             size="lg"
-            colorScheme="green"
+            colorScheme="brand"
             onClick={() => navigate("/login")}
-            _hover={{ transform: "translateY(-2px)" }}
-            transition="all 0.2s"
           >
-            Get Started
+            Sign in
           </Button>
         </Stack>
       </MotionBox>

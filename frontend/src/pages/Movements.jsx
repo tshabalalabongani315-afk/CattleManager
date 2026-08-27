@@ -87,7 +87,7 @@ export default function Movements() {
               onChange={(e) => setNote(e.target.value)}
             />
 
-            <Button colorScheme="green" onClick={save}>
+            <Button colorScheme="brand" onClick={save}>
               Add
             </Button>
           </HStack>

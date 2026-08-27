@@ -9,22 +9,22 @@ import {
   FiUsers,
   FiSettings,
 } from "react-icons/fi";
+import Logo from "./Logo";
 
 export default function Sidebar() {
   return (
     <Box
-      bg="gray.900"
+      bg="ink.900"
       color="white"
       w="240px"
       minH="100vh"
       p={4}
       display="flex"
       flexDirection="column"
-      _dark={{ bg: "gray.800" }}
     >
-      <Text fontWeight="bold" fontSize="lg" mb={2}>
-        🐄 Cattle Manager
-      </Text>
+      <Box px={1} mb={4}>
+        <Logo size={20} markColor="#5E9C73" textProps={{ fontSize: "md" }} />
+      </Box>
 
       <VStack spacing={1} align="stretch" flex="1">
         <Section title="MAIN" />
@@ -33,13 +33,13 @@ export default function Sidebar() {
         <NavItem to="/daily-counts" icon={<FiBarChart2 />} label="Daily Counts" />
         <NavItem to="/movements" icon={<FiRepeat />} label="Movements" />
 
-        <Divider my={3} borderColor="whiteAlpha.300" />
+        <Divider my={3} borderColor="whiteAlpha.200" />
 
         <Section title="MANAGE" />
         <NavItem to="/reports" icon={<FiClipboard />} label="Reports" />
         <NavItem to="/herd" icon={<FiUsers />} label="Herd Status" />
 
-        <Divider my={3} borderColor="whiteAlpha.300" />
+        <Divider my={3} borderColor="whiteAlpha.200" />
 
         <Section title="SYSTEM" />
         <NavItem to="/settings" icon={<FiSettings />} label="Settings" />
@@ -50,7 +50,7 @@ export default function Sidebar() {
 
 function Section({ title }) {
   return (
-    <Text fontSize="xs" color="whiteAlpha.600" mt={2} mb={1} px={3} letterSpacing="wide">
+    <Text fontSize="xs" color="whiteAlpha.500" mt={2} mb={1} px={3} letterSpacing="wide">
       {title}
     </Text>
   );
@@ -67,8 +67,8 @@ function NavItem({ to, icon, label }) {
           px={3}
           py={2}
           rounded="md"
-          bg={isActive ? "green.500" : "transparent"}
-          _hover={{ bg: isActive ? "green.500" : "whiteAlpha.200" }}
+          bg={isActive ? "brand.600" : "transparent"}
+          _hover={{ bg: isActive ? "brand.600" : "whiteAlpha.100" }}
           transition="background 0.15s ease"
         >
           {icon}
