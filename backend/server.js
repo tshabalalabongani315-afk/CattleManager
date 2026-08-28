@@ -107,6 +107,9 @@ app.get("/cattle/:id", async (req, res) => {
 // Add cattle
 app.post("/cattle", async (req, res) => {
   const { tag, breed, sex, date_of_birth, status } = req.body;
+  if (!tag || !breed) {
+    return res.status(400).json({ error: "Tag and breed are required" });
+  }
   await db.run(
     "INSERT INTO cattle (tag, breed, sex, date_of_birth, status, user_id) VALUES (?, ?, ?, ?, ?, ?)",
     [tag, breed, sex || null, date_of_birth || null, status || "Active", req.user.sub]
@@ -129,6 +132,10 @@ app.put("/cattle/:id", async (req, res) => {
   const date_of_birth = req.body.date_of_birth ?? current.date_of_birth;
   const status = req.body.status ?? current.status;
 
+  if (!tag || !breed) {
+    return res.status(400).json({ error: "Tag and breed are required" });
+  }
+
   await db.run(
     "UPDATE cattle SET tag = ?, breed = ?, sex = ?, date_of_birth = ?, status = ? WHERE id = ? AND user_id = ?",
     [tag, breed, sex, date_of_birth, status, id, req.user.sub]
@@ -137,11 +144,20 @@ app.put("/cattle/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-// Delete cattle
+// Delete cattle (and its vaccination/weight history, so nothing is orphaned)
 app.delete("/cattle/:id", async (req, res) => {
   const { id } = req.params;
 
-  await db.run("DELETE FROM cattle WHERE id = ? AND user_id = ?", [id, req.user.sub]);
+  const owned = await db.get("SELECT id FROM cattle WHERE id = ? AND user_id = ?", [
+    id,
+    req.user.sub,
+  ]);
+  if (owned) {
+    await db.run("DELETE FROM vaccinations WHERE cattle_id = ?", [id]);
+    await db.run("DELETE FROM weights WHERE cattle_id = ?", [id]);
+    await db.run("DELETE FROM cattle WHERE id = ? AND user_id = ?", [id, req.user.sub]);
+  }
+
   res.json({ success: true });
 });
 

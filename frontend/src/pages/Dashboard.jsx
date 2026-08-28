@@ -19,6 +19,7 @@ import PageTransition from "../components/PageTransition";
 import { api } from "../api";
 import { dueStatus } from "../utils/vaccinations";
 import { BREED_COLORS } from "../utils/colors";
+import { parseLocalDate } from "../utils/dates";
 
 const MOVEMENT_COLOR = {
   IN: "green",
@@ -35,7 +36,7 @@ const QUICK_ACTIONS = [
 ];
 
 function isThisMonth(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const today = new Date();
   return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
 }

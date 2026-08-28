@@ -6,6 +6,10 @@ const db = await open({
   driver: sqlite3.Database,
 });
 
+// Enforce FOREIGN KEY constraints (off by default in SQLite). Safe to enable
+// at any time — it only affects writes going forward, not existing rows.
+await db.exec("PRAGMA foreign_keys = ON");
+
 await db.exec(`
   CREATE TABLE IF NOT EXISTS cattle (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

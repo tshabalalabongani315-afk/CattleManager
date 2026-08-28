@@ -1,6 +1,8 @@
+import { parseLocalDate } from "./dates";
+
 export function dueStatus(nextDueDate) {
   if (!nextDueDate) return null;
-  const due = new Date(nextDueDate);
+  const due = parseLocalDate(nextDueDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diffDays = Math.round((due - today) / 86400000);

@@ -104,7 +104,9 @@ export default function Register() {
     const q = search.trim().toLowerCase();
     return cattle.filter((c) => {
       const matchesSearch =
-        !q || c.tag.toLowerCase().includes(q) || c.breed.toLowerCase().includes(q);
+        !q ||
+        (c.tag ?? "").toLowerCase().includes(q) ||
+        (c.breed ?? "").toLowerCase().includes(q);
       const matchesBreed = !breedFilter || c.breed === breedFilter;
       return matchesSearch && matchesBreed;
     });
