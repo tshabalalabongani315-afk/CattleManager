@@ -30,6 +30,14 @@ if (!cattleColumns.includes("date_of_birth")) {
 if (!cattleColumns.includes("status")) {
   await db.exec("ALTER TABLE cattle ADD COLUMN status TEXT DEFAULT 'Active'");
 }
+if (!cattleColumns.includes("user_id")) {
+  await db.exec("ALTER TABLE cattle ADD COLUMN user_id INTEGER");
+}
+
+const dailyCountsColumns = (await db.all("PRAGMA table_info(daily_counts)")).map((c) => c.name);
+if (!dailyCountsColumns.includes("user_id")) {
+  await db.exec("ALTER TABLE daily_counts ADD COLUMN user_id INTEGER");
+}
 
 await db.exec(`
   CREATE TABLE IF NOT EXISTS movements (
@@ -40,6 +48,11 @@ await db.exec(`
     date TEXT NOT NULL
   )
 `);
+
+const movementsColumns = (await db.all("PRAGMA table_info(movements)")).map((c) => c.name);
+if (!movementsColumns.includes("user_id")) {
+  await db.exec("ALTER TABLE movements ADD COLUMN user_id INTEGER");
+}
 
 await db.exec(`
   CREATE TABLE IF NOT EXISTS vaccinations (

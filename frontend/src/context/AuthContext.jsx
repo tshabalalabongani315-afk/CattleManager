@@ -1,13 +1,10 @@
 import { createContext, useContext, useState } from "react";
-import { AUTH_STORAGE_KEY } from "../api";
+import { AUTH_STORAGE_KEY, readStoredAuth } from "../api";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [auth, setAuth] = useState(() => {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [auth, setAuth] = useState(() => readStoredAuth());
 
   const login = (token, user) => {
     const authData = { token, user };

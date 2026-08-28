@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Heading, Input, Select, Stack, Text, Link } from "@chakra-ui/react";
+import { Box, Button, Heading, Input, Stack, Text, Link } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { api } from "../api";
@@ -12,7 +12,6 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("owner");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +28,7 @@ export default function Signup() {
     setError("");
     setLoading(true);
     try {
-      await api.post("/auth/signup", { username, password, role });
+      await api.post("/auth/signup", { username, password });
       navigate("/login", { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || "Sign up failed. Please try again.");
@@ -91,14 +90,6 @@ export default function Signup() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             borderColor="whiteAlpha.300"
           />
-          <Select value={role} onChange={(e) => setRole(e.target.value)} borderColor="whiteAlpha.300">
-            <option value="owner" style={{ color: "black" }}>
-              Farm Owner
-            </option>
-            <option value="worker" style={{ color: "black" }}>
-              Farm Worker
-            </option>
-          </Select>
 
           {error && (
             <Text fontSize="sm" color="red.300">
