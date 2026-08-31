@@ -7,13 +7,15 @@ import { api } from "../api";
 export default function HerdStatus() {
   const [registered, setRegistered] = useState(null);
   const [latestCount, setLatestCount] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/cattle").then((res) => setRegistered(res.data.length));
-    api.get("/daily-counts").then((res) => setLatestCount(res.data[0] ?? null));
+    Promise.all([
+      api.get("/cattle").then((res) => setRegistered(res.data.length)),
+      api.get("/daily-counts").then((res) => setLatestCount(res.data[0] ?? null)),
+    ]).finally(() => setLoading(false));
   }, []);
 
-  const loading = registered === null || latestCount === undefined;
   const counted = latestCount?.count;
   const diff = registered != null && counted != null ? registered - Number(counted) : null;
 

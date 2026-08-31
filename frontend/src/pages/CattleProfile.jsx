@@ -25,18 +25,25 @@ export default function CattleProfile() {
 
   const [animal, setAnimal] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tag, setTag] = useState("");
   const [breed, setBreed] = useState("");
 
   const load = async () => {
+    setNotFound(false);
+    setLoadError(false);
     try {
       const res = await api.get(`/cattle/${id}`);
       setAnimal(res.data);
       setTag(res.data.tag);
       setBreed(res.data.breed);
-    } catch {
-      setNotFound(true);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setNotFound(true);
+      } else {
+        setLoadError(true);
+      }
     }
   };
 
@@ -62,6 +69,23 @@ export default function CattleProfile() {
       <PageTransition>
         <Card>
           <Text color="gray.500">Animal not found.</Text>
+        </Card>
+      </PageTransition>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <PageTransition>
+        <Card>
+          <VStack align="start" spacing={3}>
+            <Text color="gray.500">
+              Something went wrong loading this animal. Check your connection and try again.
+            </Text>
+            <Button size="sm" onClick={load}>
+              Try again
+            </Button>
+          </VStack>
         </Card>
       </PageTransition>
     );

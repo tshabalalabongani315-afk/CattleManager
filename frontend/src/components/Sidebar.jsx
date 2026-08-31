@@ -16,24 +16,22 @@ import {
 import Logo from "./Logo";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { dueStatus } from "../utils/vaccinations";
 
 const MotionBox = motion(Box);
 
-function countOverdue(records) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return records.filter((r) => r.next_due_date && new Date(r.next_due_date) < today).length;
-}
-
 export default function Sidebar() {
-  const [overdueCount, setOverdueCount] = useState(0);
+  const [alertCount, setAlertCount] = useState(0);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     api
       .get("/vaccinations")
-      .then((res) => setOverdueCount(countOverdue(res.data)))
+      .then((res) => {
+        const needsAttention = res.data.filter((r) => dueStatus(r.next_due_date)).length;
+        setAlertCount(needsAttention);
+      })
       .catch(() => {});
   }, []);
 
@@ -72,7 +70,7 @@ export default function Sidebar() {
           to="/vaccinations"
           icon={<FiActivity />}
           label="Vaccinations"
-          badge={overdueCount > 0 ? overdueCount : null}
+          badge={alertCount > 0 ? alertCount : null}
         />
 
         <Divider my={3} borderColor="whiteAlpha.200" />
