@@ -2,7 +2,7 @@
 
 A secure herd-management app for commercial cattle owners: keep the register, vaccinations, weights, daily kraal counts and movements in one place, and reconcile the register against the latest count to spot anything unaccounted for.
 
-**Live demo:** _add your Vercel URL here after the first deploy_ — the **Try the live demo** button signs you into a private, pre-filled sandbox, no sign-up needed.
+**Live demo:** https://cattle-manager-seven.vercel.app — the **Try the live demo** button signs you into a private, pre-filled sandbox, no sign-up needed.
 
 ## Highlights
 
