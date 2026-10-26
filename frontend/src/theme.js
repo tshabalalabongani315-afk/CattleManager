@@ -1,22 +1,15 @@
 import { extendTheme } from "@chakra-ui/react";
 
-const config = {
-  initialColorMode: "light",
-  useSystemColorMode: false,
-};
+const FONT = "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 const theme = extendTheme({
-  config,
-  fonts: {
-    heading: "'Inter', system-ui, sans-serif",
-    body: "'Inter', system-ui, sans-serif",
+  config: {
+    // Follow the visitor's OS preference until they pick one themselves.
+    initialColorMode: "system",
+    useSystemColorMode: false,
   },
-  radii: {
-    md: "8px",
-    lg: "10px",
-    xl: "12px",
-    "2xl": "14px",
-  },
+  fonts: { heading: FONT, body: FONT },
+  radii: { md: "8px", lg: "10px", xl: "14px", "2xl": "18px" },
   colors: {
     brand: {
       50: "#EFF6F1",
@@ -30,38 +23,66 @@ const theme = extendTheme({
       800: "#193425",
       900: "#101F17",
     },
-    ink: {
-      50: "#F4F5F4",
-      100: "#E3E5E3",
-      200: "#C3C7C4",
-      300: "#8E958F",
-      400: "#5E655F",
-      500: "#3C433D",
-      600: "#2A302B",
-      700: "#1F2521",
-      800: "#161B18",
-      900: "#0F1413",
+  },
+  // Semantic tokens keep light/dark in one place — components say `bg="surface"`.
+  semanticTokens: {
+    colors: {
+      "app.bg": { default: "#F6F7F5", _dark: "#0D1210" },
+      surface: { default: "#FFFFFF", _dark: "#151B18" },
+      "surface.muted": { default: "#F1F3F0", _dark: "#1C2420" },
+      line: { default: "#E3E7E1", _dark: "#27312B" },
+      fg: { default: "#17201A", _dark: "#ECF0ED" },
+      "fg.muted": { default: "#59635C", _dark: "#9AA59D" },
+      "brand.fg": { default: "brand.600", _dark: "brand.300" },
     },
   },
   styles: {
     global: {
-      body: {
-        bg: "gray.50",
-        color: "gray.800",
-        _dark: {
-          bg: "ink.800",
-          color: "gray.100",
-        },
-      },
+      body: { bg: "app.bg", color: "fg", lineHeight: "1.55" },
     },
   },
   components: {
     Button: {
-      baseStyle: {
-        fontWeight: "600",
-        borderRadius: "lg",
+      defaultProps: { colorScheme: "brand" },
+      baseStyle: { fontWeight: "600", borderRadius: "lg" },
+      variants: {
+        // Neutral outline used for secondary actions.
+        subtle: {
+          bg: "surface",
+          border: "1px solid",
+          borderColor: "line",
+          color: "fg",
+          _hover: { bg: "surface.muted" },
+        },
       },
     },
+    Input: { defaultProps: { focusBorderColor: "brand.500" } },
+    Select: { defaultProps: { focusBorderColor: "brand.500" } },
+    Textarea: { defaultProps: { focusBorderColor: "brand.500" } },
+    FormLabel: { baseStyle: { fontSize: "sm", fontWeight: "600", mb: 1.5 } },
+    Heading: { baseStyle: { letterSpacing: "-0.015em", fontWeight: "650" } },
+    Badge: {
+      baseStyle: { borderRadius: "full", px: 2.5, py: 0.5, textTransform: "none", fontWeight: "600" },
+    },
+    Table: {
+      variants: {
+        simple: {
+          th: {
+            color: "fg.muted",
+            fontSize: "xs",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+            borderColor: "line",
+          },
+          td: { borderColor: "line" },
+        },
+      },
+    },
+    Modal: { baseStyle: { dialog: { borderRadius: "2xl", bg: "surface" } } },
+    Drawer: { baseStyle: { dialog: { bg: "surface" } } },
+    Tabs: { defaultProps: { colorScheme: "brand" } },
+    Switch: { defaultProps: { colorScheme: "brand" } },
   },
 });
 

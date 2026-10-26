@@ -1,110 +1,63 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import ProtectedRoute from "./components/ProtectedRoute";
-import AppShell from "./components/AppShell";
+import ProtectedRoute, { PublicOnly } from "./components/ProtectedRoute";
+import PageSpinner from "./components/ui/PageSpinner";
 
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import Register from "./pages/Register";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import DailyCounts from "./pages/DailyCounts";
-import HerdStatus from "./pages/HerdStatus";
-import Movements from "./pages/Movements";
-import CattleProfile from "./pages/CattleProfile";
-import Vaccinations from "./pages/Vaccinations";
 
-function Protected({ children }) {
-  return (
-    <ProtectedRoute>
-      <AppShell>{children}</AppShell>
-    </ProtectedRoute>
-  );
-}
+// Pages behind login are split into their own chunks so the landing page
+// (and heavy chart code) don't load until they're needed.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Register = lazy(() => import("./pages/Register"));
+const CattleProfile = lazy(() => import("./pages/CattleProfile"));
+const DailyCounts = lazy(() => import("./pages/DailyCounts"));
+const Movements = lazy(() => import("./pages/Movements"));
+const Vaccinations = lazy(() => import("./pages/Vaccinations"));
+const HerdStatus = lazy(() => import("./pages/HerdStatus"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Welcome />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+      <Suspense fallback={<PageSpinner fullScreen />}>
+        <Routes>
+          <Route path="/" element={<Welcome />} />
+          <Route
+            path="/login"
+            element={
+              <PublicOnly>
+                <Login />
+              </PublicOnly>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicOnly>
+                <Signup />
+              </PublicOnly>
+            }
+          />
 
-        <Route
-          path="/dashboard"
-          element={
-            <Protected>
-              <Dashboard />
-            </Protected>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <Protected>
-              <Register />
-            </Protected>
-          }
-        />
-        <Route
-          path="/cattle/:id"
-          element={
-            <Protected>
-              <CattleProfile />
-            </Protected>
-          }
-        />
-        <Route
-          path="/daily-counts"
-          element={
-            <Protected>
-              <DailyCounts />
-            </Protected>
-          }
-        />
-        <Route
-          path="/vaccinations"
-          element={
-            <Protected>
-              <Vaccinations />
-            </Protected>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <Protected>
-              <Reports />
-            </Protected>
-          }
-        />
-        <Route
-          path="/herd"
-          element={
-            <Protected>
-              <HerdStatus />
-            </Protected>
-          }
-        />
-        <Route
-          path="/movements"
-          element={
-            <Protected>
-              <Movements />
-            </Protected>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <Protected>
-              <Settings />
-            </Protected>
-          }
-        />
-      </Routes>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/cattle/:id" element={<CattleProfile />} />
+            <Route path="/daily-counts" element={<DailyCounts />} />
+            <Route path="/movements" element={<Movements />} />
+            <Route path="/vaccinations" element={<Vaccinations />} />
+            <Route path="/herd" element={<HerdStatus />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

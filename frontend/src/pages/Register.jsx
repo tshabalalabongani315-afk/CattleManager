@@ -1,152 +1,140 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Input,
-  Select,
+  Badge,
   Button,
-  Heading,
-  VStack,
   HStack,
+  Icon,
+  IconButton,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Select,
+  Skeleton,
+  Stack,
   Table,
-  Thead,
+  TableContainer,
   Tbody,
-  Tr,
-  Th,
   Td,
   Text,
-  Badge,
-  Icon,
+  Th,
+  Thead,
+  Tr,
+  useDisclosure,
 } from "@chakra-ui/react";
-import { FiChevronUp, FiChevronDown } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiDownload, FiEdit2, FiMoreHorizontal, FiPlus, FiSearch, FiTrash2, FiUsers } from "react-icons/fi";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
+import CattleFormModal from "../components/CattleFormModal";
+import PageHeader from "../components/ui/PageHeader";
+import EmptyState from "../components/ui/EmptyState";
+import ErrorState from "../components/ui/ErrorState";
 import { api } from "../api";
+import { useFetch } from "../hooks/useFetch";
+import { useConfirm } from "../hooks/confirmContext";
+import { useNotify } from "../hooks/useNotify";
 import { downloadCSV } from "../utils/csv";
 import { formatAge } from "../utils/age";
 import { STATUS_COLORS } from "../utils/colors";
 
 const PAGE_SIZE = 20;
-const STATUSES = ["Active", "Sold", "Deceased"];
 
 export default function Register() {
   const navigate = useNavigate();
-  const [cattle, setCattle] = useState([]);
-  const [tag, setTag] = useState("");
-  const [breed, setBreed] = useState("");
-  const [sex, setSex] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [status, setStatus] = useState("Active");
-  const [editId, setEditId] = useState(null);
+  const confirm = useConfirm();
+  const notify = useNotify();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: cattle, loading, error, reload } = useFetch("/cattle");
+
+  const form = useDisclosure();
+  const [editing, setEditing] = useState(null);
+
   const [search, setSearch] = useState("");
   const [breedFilter, setBreedFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [sortKey, setSortKey] = useState("tag");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
 
-  const load = async () => {
-    const res = await api.get("/cattle");
-    setCattle(res.data);
-  };
-
+  // "Add animal" links elsewhere in the app arrive as /register?new=1.
+  const { onOpen: openForm } = form;
   useEffect(() => {
-    load();
-  }, []);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, breedFilter, sortKey, sortDir]);
-
-  const resetForm = () => {
-    setTag("");
-    setBreed("");
-    setSex("");
-    setDateOfBirth("");
-    setStatus("Active");
-    setEditId(null);
-  };
-
-  const save = async () => {
-    if (!tag || !breed) return alert("Fill all fields");
-
-    const payload = { tag, breed, sex: sex || null, date_of_birth: dateOfBirth || null, status };
-
-    if (editId) {
-      await api.put(`/cattle/${editId}`, payload);
-    } else {
-      await api.post("/cattle", payload);
+    if (searchParams.get("new")) {
+      openForm();
+      setSearchParams({}, { replace: true });
     }
+  }, [searchParams, setSearchParams, openForm]);
 
-    resetForm();
-    load();
-  };
+  const rows = useMemo(() => cattle ?? [], [cattle]);
 
-  const edit = (item) => {
-    setEditId(item.id);
-    setTag(item.tag);
-    setBreed(item.breed);
-    setSex(item.sex || "");
-    setDateOfBirth(item.date_of_birth || "");
-    setStatus(item.status || "Active");
-  };
-
-  const remove = async (id) => {
-    if (!confirm("Delete this cattle?")) return;
-    await api.delete(`/cattle/${id}`);
-    load();
-  };
-
-  const breeds = useMemo(
-    () => [...new Set(cattle.map((c) => c.breed).filter(Boolean))].sort(),
-    [cattle]
-  );
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return cattle.filter((c) => {
-      const matchesSearch =
-        !q ||
-        (c.tag ?? "").toLowerCase().includes(q) ||
-        (c.breed ?? "").toLowerCase().includes(q);
-      const matchesBreed = !breedFilter || c.breed === breedFilter;
-      return matchesSearch && matchesBreed;
-    });
-  }, [cattle, search, breedFilter]);
+  const breeds = useMemo(() => [...new Set(rows.map((c) => c.breed).filter(Boolean))].sort(), [rows]);
 
   const sorted = useMemo(() => {
-    const arr = [...filtered];
-    arr.sort((a, b) => {
-      let av = a[sortKey];
-      let bv = b[sortKey];
+    const q = search.trim().toLowerCase();
+    const filtered = rows.filter(
+      (c) =>
+        (!q || c.tag.toLowerCase().includes(q) || c.breed.toLowerCase().includes(q)) &&
+        (!breedFilter || c.breed === breedFilter) &&
+        (!statusFilter || c.status === statusFilter)
+    );
 
-      if (sortKey === "date_of_birth") {
-        av = av ? new Date(av).getTime() : -Infinity;
-        bv = bv ? new Date(bv).getTime() : -Infinity;
-      } else {
-        av = (av ?? "").toString().toLowerCase();
-        bv = (bv ?? "").toString().toLowerCase();
-      }
-
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-    return arr;
-  }, [filtered, sortKey, sortDir]);
+    const value = (c) =>
+      sortKey === "date_of_birth" ? (c.date_of_birth ?? "") : String(c[sortKey] ?? "").toLowerCase();
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort(
+      (a, b) => dir * value(a).localeCompare(value(b), undefined, { numeric: true })
+    );
+  }, [rows, search, breedFilter, statusFilter, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginated = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visible = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const changeFilter = (setter) => (e) => {
+    setter(e.target.value);
+    setPage(1);
+  };
 
   const toggleSort = (key) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
       setSortKey(key);
       setSortDir("asc");
     }
+    setPage(1);
   };
 
-  const exportCSV = () => {
+  const openAdd = () => {
+    setEditing(null);
+    form.onOpen();
+  };
+  const openEdit = (animal) => {
+    setEditing(animal);
+    form.onOpen();
+  };
+
+  const remove = async (animal) => {
+    const ok = await confirm({
+      title: `Delete ${animal.tag}?`,
+      body: "This also removes its vaccination and weight history. It can't be undone.",
+      confirmLabel: "Delete animal",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/cattle/${animal.id}`);
+      notify.success(`${animal.tag} deleted`);
+      reload();
+    } catch (err) {
+      notify.error(err, "Couldn't delete the animal");
+    }
+  };
+
+  const exportCSV = () =>
     downloadCSV(
       "cattle-register.csv",
       [
@@ -158,171 +146,155 @@ export default function Register() {
       ],
       sorted
     );
-  };
 
   return (
     <PageTransition>
-      <VStack spacing={6} align="stretch">
-        <Card maxW="440px">
-          <Heading size="md" mb={4}>
-            {editId ? "Edit Cattle" : "Register Cattle"}
-          </Heading>
+      <PageHeader
+        title="Register"
+        description="Every animal on the farm. Click a row for its vaccination and weight history."
+        actions={
+          <>
+            <Button variant="subtle" leftIcon={<FiDownload />} onClick={exportCSV} isDisabled={sorted.length === 0}>
+              Export CSV
+            </Button>
+            <Button leftIcon={<FiPlus />} onClick={openAdd}>
+              Add animal
+            </Button>
+          </>
+        }
+      />
 
-          <VStack spacing={3}>
-            <Input
-              placeholder="Tag Number"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-            />
-            <Input
-              placeholder="Breed"
-              value={breed}
-              onChange={(e) => setBreed(e.target.value)}
-            />
-            <HStack w="full">
-              <Select placeholder="Sex" value={sex} onChange={(e) => setSex(e.target.value)}>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </Select>
-              <Input
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-              />
-            </HStack>
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-            <HStack w="full">
-              <Button colorScheme="brand" w="full" onClick={save}>
-                {editId ? "Update" : "Save"}
+      <Card p={0} overflow="hidden">
+        {error && !cattle ? (
+          <ErrorState error={error} onRetry={reload} title="Couldn't load the register" />
+        ) : loading ? (
+          <Stack p={5} spacing={3}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} h="44px" borderRadius="lg" />
+            ))}
+          </Stack>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={FiUsers}
+            title="Your register is empty"
+            description="Add your first animal to start tracking vaccinations, weights and counts."
+            action={
+              <Button leftIcon={<FiPlus />} onClick={openAdd}>
+                Add your first animal
               </Button>
-              {editId && (
-                <Button variant="ghost" onClick={resetForm}>
-                  Cancel
-                </Button>
-              )}
-            </HStack>
-          </VStack>
-        </Card>
-
-        <Card>
-          <HStack justify="space-between" mb={4} flexWrap="wrap" gap={3}>
-            <Heading size="md">Registered Cattle</Heading>
-            <HStack flexWrap="wrap" gap={2}>
-              <Input
-                placeholder="Search tag or breed…"
-                size="sm"
-                maxW="200px"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Select
-                size="sm"
-                maxW="160px"
-                value={breedFilter}
-                onChange={(e) => setBreedFilter(e.target.value)}
-              >
-                <option value="">All Breeds</option>
+            }
+          />
+        ) : (
+          <>
+            <HStack p={4} spacing={3} flexWrap="wrap" borderBottom="1px solid" borderColor="line">
+              <InputGroup maxW={{ base: "full", sm: "280px" }} flex={{ base: "1 1 100%", sm: "0 1 auto" }}>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={FiSearch} color="fg.muted" />
+                </InputLeftElement>
+                <Input
+                  placeholder="Search tag or breed"
+                  aria-label="Search tag or breed"
+                  value={search}
+                  onChange={changeFilter(setSearch)}
+                />
+              </InputGroup>
+              <Select aria-label="Filter by breed" maxW="170px" value={breedFilter} onChange={changeFilter(setBreedFilter)}>
+                <option value="">All breeds</option>
                 {breeds.map((b) => (
                   <option key={b} value={b}>
                     {b}
                   </option>
                 ))}
               </Select>
-              <Button size="sm" onClick={exportCSV} isDisabled={sorted.length === 0}>
-                Export CSV
-              </Button>
+              <Select aria-label="Filter by status" maxW="150px" value={statusFilter} onChange={changeFilter(setStatusFilter)}>
+                <option value="">All statuses</option>
+                <option value="Active">Active</option>
+                <option value="Sold">Sold</option>
+                <option value="Deceased">Deceased</option>
+              </Select>
+              <Text fontSize="sm" color="fg.muted" ml="auto">
+                {sorted.length} {sorted.length === 1 ? "animal" : "animals"}
+              </Text>
             </HStack>
-          </HStack>
 
-          {sorted.length === 0 ? (
-            <Text color="gray.500">No cattle match your filters.</Text>
-          ) : (
-            <>
-              <Table>
-                <Thead>
-                  <Tr>
-                    <SortTh label="Tag" sortKey="tag" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortTh label="Breed" sortKey="breed" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortTh label="Sex" sortKey="sex" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <SortTh
-                      label="Age"
-                      sortKey="date_of_birth"
-                      current={sortKey}
-                      dir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <SortTh label="Status" sortKey="status" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {paginated.map((c) => (
-                    <Tr
-                      key={c.id}
-                      _hover={{ bg: "blackAlpha.50" }}
-                      _dark={{ _hover: { bg: "whiteAlpha.100" } }}
-                      cursor="pointer"
-                      onClick={() => navigate(`/cattle/${c.id}`)}
-                    >
-                      <Td fontWeight="medium">{c.tag}</Td>
-                      <Td>{c.breed}</Td>
-                      <Td>{c.sex || "—"}</Td>
-                      <Td>{formatAge(c.date_of_birth) || "—"}</Td>
-                      <Td>
-                        <Badge colorScheme={STATUS_COLORS[c.status] || "gray"}>
-                          {c.status || "Active"}
-                        </Badge>
-                      </Td>
-                      <Td onClick={(e) => e.stopPropagation()}>
-                        <HStack>
-                          <Button size="sm" onClick={() => edit(c)}>
-                            Edit
-                          </Button>
-                          <Button size="sm" colorScheme="red" onClick={() => remove(c.id)}>
-                            Delete
-                          </Button>
-                        </HStack>
-                      </Td>
+            {sorted.length === 0 ? (
+              <EmptyState icon={FiSearch} title="No animals match" description="Try a different search or clear the filters." />
+            ) : (
+              <TableContainer>
+                <Table>
+                  <Thead>
+                    <Tr>
+                      <SortTh label="Tag" sortKey="tag" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortTh label="Breed" sortKey="breed" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortTh label="Sex" sortKey="sex" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortTh label="Age" sortKey="date_of_birth" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortTh label="Status" sortKey="status" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <Th w="1%">
+                        <span style={{ position: "absolute", left: "-9999px" }}>Actions</span>
+                      </Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
+                  </Thead>
+                  <Tbody>
+                    {visible.map((c) => (
+                      <Tr
+                        key={c.id}
+                        cursor="pointer"
+                        _hover={{ bg: "surface.muted" }}
+                        onClick={() => navigate(`/cattle/${c.id}`)}
+                      >
+                        <Td fontWeight="600">{c.tag}</Td>
+                        <Td>{c.breed}</Td>
+                        <Td>{c.sex || "—"}</Td>
+                        <Td>{formatAge(c.date_of_birth) || "—"}</Td>
+                        <Td>
+                          <Badge colorScheme={STATUS_COLORS[c.status] || "gray"}>{c.status}</Badge>
+                        </Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <Menu placement="bottom-end">
+                            <MenuButton
+                              as={IconButton}
+                              aria-label={`Actions for ${c.tag}`}
+                              icon={<FiMoreHorizontal />}
+                              variant="ghost"
+                              size="sm"
+                            />
+                            <MenuList>
+                              <MenuItem icon={<FiEdit2 />} onClick={() => openEdit(c)}>
+                                Edit
+                              </MenuItem>
+                              <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => remove(c)}>
+                                Delete
+                              </MenuItem>
+                            </MenuList>
+                          </Menu>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            )}
 
-              {totalPages > 1 && (
-                <HStack justify="space-between" mt={4}>
-                  <Text fontSize="sm" color="gray.500">
-                    Page {currentPage} of {totalPages} &middot; {sorted.length} animals
-                  </Text>
-                  <HStack>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      isDisabled={currentPage === 1}
-                    >
-                      Prev
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      isDisabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </HStack>
+            {totalPages > 1 && (
+              <HStack justify="space-between" p={4} borderTop="1px solid" borderColor="line">
+                <Text fontSize="sm" color="fg.muted">
+                  Page {currentPage} of {totalPages}
+                </Text>
+                <HStack>
+                  <Button size="sm" variant="subtle" onClick={() => setPage(currentPage - 1)} isDisabled={currentPage === 1}>
+                    Previous
+                  </Button>
+                  <Button size="sm" variant="subtle" onClick={() => setPage(currentPage + 1)} isDisabled={currentPage === totalPages}>
+                    Next
+                  </Button>
                 </HStack>
-              )}
-            </>
-          )}
-        </Card>
-      </VStack>
+              </HStack>
+            )}
+          </>
+        )}
+      </Card>
+
+      <CattleFormModal isOpen={form.isOpen} onClose={form.onClose} animal={editing} onSaved={reload} />
     </PageTransition>
   );
 }
@@ -330,9 +302,14 @@ export default function Register() {
 function SortTh({ label, sortKey, current, dir, onSort }) {
   const active = current === sortKey;
   return (
-    <Th cursor="pointer" userSelect="none" onClick={() => onSort(sortKey)}>
+    <Th
+      cursor="pointer"
+      userSelect="none"
+      onClick={() => onSort(sortKey)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
       <HStack spacing={1}>
-        <Text>{label}</Text>
+        <Text as="span">{label}</Text>
         {active && <Icon as={dir === "asc" ? FiChevronUp : FiChevronDown} boxSize={3} />}
       </HStack>
     </Th>

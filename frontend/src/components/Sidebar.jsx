@@ -1,183 +1,172 @@
-import { useEffect, useState } from "react";
-import { Box, VStack, HStack, Text, Divider, Badge, Icon } from "@chakra-ui/react";
+import { useCallback, useEffect, useState } from "react";
+import { Badge, Box, Divider, HStack, Icon, Text, VStack } from "@chakra-ui/react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   FiHome,
   FiList,
   FiBarChart2,
   FiRepeat,
   FiActivity,
-  FiClipboard,
-  FiUsers,
+  FiPieChart,
+  FiCheckSquare,
   FiSettings,
   FiLogOut,
 } from "react-icons/fi";
 import Logo from "./Logo";
-import { api } from "../api";
+import ColorModeToggle from "./ColorModeToggle";
+import { api, DATA_CHANGED_EVENT } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { dueStatus } from "../utils/vaccinations";
 
-const MotionBox = motion(Box);
+const NAV = [
+  {
+    heading: "Farm",
+    items: [
+      { to: "/dashboard", icon: FiHome, label: "Dashboard" },
+      { to: "/register", icon: FiList, label: "Register" },
+      { to: "/daily-counts", icon: FiBarChart2, label: "Daily counts" },
+      { to: "/movements", icon: FiRepeat, label: "Movements" },
+      { to: "/vaccinations", icon: FiActivity, label: "Vaccinations", badgeKey: "vaccinations" },
+    ],
+  },
+  {
+    heading: "Insights",
+    items: [
+      { to: "/herd", icon: FiCheckSquare, label: "Herd status" },
+      { to: "/reports", icon: FiPieChart, label: "Reports" },
+    ],
+  },
+  { heading: "Account", items: [{ to: "/settings", icon: FiSettings, label: "Settings" }] },
+];
 
-export default function Sidebar() {
-  const [alertCount, setAlertCount] = useState(0);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+/** Count of vaccinations that are overdue or due soon, kept fresh after any write. */
+function useAttentionCount() {
+  const [count, setCount] = useState(0);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .get("/vaccinations")
-      .then((res) => {
-        const needsAttention = res.data.filter((r) => dueStatus(r.next_due_date)).length;
-        setAlertCount(needsAttention);
-      })
+      .then((res) => setCount(res.data.filter((r) => dueStatus(r.next_due_date)).length))
       .catch(() => {});
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  useEffect(() => {
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
+  }, [load]);
+
+  return count;
+}
+
+export default function Sidebar({ onNavigate }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const attention = useAttentionCount();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   return (
-    <Box
-      bg="rgba(15,20,19,0.72)"
-      backdropFilter="blur(20px) saturate(150%)"
-      borderRight="1px solid"
-      borderColor="whiteAlpha.100"
-      color="white"
-      w="240px"
-      minH="100vh"
-      p={4}
-      display="flex"
-      flexDirection="column"
-      position="sticky"
-      top={0}
-      alignSelf="flex-start"
-    >
-      <Box px={1} mb={4}>
-        <Logo size={20} markColor="#5E9C73" textProps={{ fontSize: "md" }} />
+    <VStack as="nav" aria-label="Main" align="stretch" spacing={0} h="full" p={4}>
+      <Box px={2} pt={1} pb={5}>
+        <Logo size={26} textProps={{ fontSize: "md" }} />
       </Box>
 
-      <VStack spacing={1} align="stretch" flex="1">
-        <Section title="MAIN" />
-        <NavItem to="/dashboard" icon={<FiHome />} label="Dashboard" />
-        <NavItem to="/register" icon={<FiList />} label="Register" />
-        <NavItem to="/daily-counts" icon={<FiBarChart2 />} label="Daily Counts" />
-        <NavItem to="/movements" icon={<FiRepeat />} label="Movements" />
-        <NavItem
-          to="/vaccinations"
-          icon={<FiActivity />}
-          label="Vaccinations"
-          badge={alertCount > 0 ? alertCount : null}
-        />
-
-        <Divider my={3} borderColor="whiteAlpha.200" />
-
-        <Section title="MANAGE" />
-        <NavItem to="/reports" icon={<FiClipboard />} label="Reports" />
-        <NavItem to="/herd" icon={<FiUsers />} label="Herd Status" />
-
-        <Divider my={3} borderColor="whiteAlpha.200" />
-
-        <Section title="SYSTEM" />
-        <NavItem to="/settings" icon={<FiSettings />} label="Settings" />
+      <VStack align="stretch" spacing={5} flex="1" overflowY="auto">
+        {NAV.map((group) => (
+          <VStack key={group.heading} align="stretch" spacing={0.5}>
+            <Text
+              px={3}
+              mb={1}
+              fontSize="11px"
+              fontWeight="600"
+              letterSpacing="0.06em"
+              textTransform="uppercase"
+              color="fg.muted"
+            >
+              {group.heading}
+            </Text>
+            {group.items.map((item) => (
+              <NavItem
+                key={item.to}
+                {...item}
+                badge={item.badgeKey === "vaccinations" && attention > 0 ? attention : null}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </VStack>
+        ))}
       </VStack>
 
-      <Divider my={3} borderColor="whiteAlpha.200" />
+      <Divider my={3} borderColor="line" />
 
-      <VStack align="stretch" spacing={2} px={1}>
+      <VStack align="stretch" spacing={1}>
         {user && (
-          <Box>
-            <Text fontSize="sm" fontWeight="medium" noOfLines={1}>
+          <Box px={3} py={1}>
+            <Text fontSize="sm" fontWeight="600" noOfLines={1}>
               {user.username}
             </Text>
-            <Text fontSize="xs" color="whiteAlpha.500" textTransform="capitalize">
-              {user.role}
+            <Text fontSize="xs" color="fg.muted">
+              {user.isDemo ? "Demo sandbox" : "Owner"}
             </Text>
           </Box>
         )}
-        <HStack
-          as="button"
-          onClick={handleLogout}
-          spacing={3}
-          px={3}
-          py={2}
-          rounded="md"
-          cursor="pointer"
-          color="whiteAlpha.700"
-          _hover={{ bg: "whiteAlpha.100", color: "white" }}
-          transition="background 0.15s ease"
-        >
-          <Icon as={FiLogOut} />
-          <Text fontSize="sm">Log out</Text>
+        <HStack justify="space-between">
+          <HStack
+            as="button"
+            type="button"
+            onClick={handleLogout}
+            spacing={3}
+            px={3}
+            py={2}
+            borderRadius="lg"
+            color="fg.muted"
+            _hover={{ bg: "surface.muted", color: "fg" }}
+            transition="background 0.15s ease"
+          >
+            <Icon as={FiLogOut} />
+            <Text fontSize="sm" fontWeight="500">
+              Sign out
+            </Text>
+          </HStack>
+          <ColorModeToggle />
         </HStack>
       </VStack>
-    </Box>
+    </VStack>
   );
 }
 
-function Section({ title }) {
+function NavItem({ to, icon, label, badge, onNavigate }) {
   return (
-    <Text fontSize="xs" color="whiteAlpha.500" mt={2} mb={1} px={3} letterSpacing="wide">
-      {title}
-    </Text>
-  );
-}
-
-function NavItem({ to, icon, label, badge }) {
-  return (
-    <NavLink to={to}>
+    <NavLink to={to} onClick={onNavigate} style={{ display: "block" }}>
       {({ isActive }) => (
-        <MotionBox
-          position="relative"
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
+        <HStack
+          justify="space-between"
           px={3}
           py={2}
-          rounded="md"
-          cursor="pointer"
-          bg="transparent"
-          _hover={{ bg: isActive ? "transparent" : "whiteAlpha.100" }}
-          whileHover={{ x: 2 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          borderRadius="lg"
+          bg={isActive ? "brand.50" : "transparent"}
+          color={isActive ? "brand.700" : "fg"}
+          _dark={{ bg: isActive ? "whiteAlpha.100" : "transparent", color: isActive ? "brand.200" : "fg" }}
+          _hover={{ bg: isActive ? undefined : "surface.muted" }}
+          transition="background 0.15s ease"
+          aria-current={isActive ? "page" : undefined}
         >
-          {isActive && (
-            <MotionBox
-              layoutId="sidebar-active-pill"
-              position="absolute"
-              inset={0}
-              bg="brand.600"
-              rounded="md"
-              transition={{ type: "spring", stiffness: 500, damping: 38 }}
-              style={{ zIndex: 0 }}
-            />
-          )}
-          <Box
-            position="relative"
-            zIndex={1}
-            display="flex"
-            alignItems="center"
-            gap={3}
-          >
-            {icon}
-            <Text fontSize="sm">{label}</Text>
-          </Box>
+          <HStack spacing={3}>
+            <Icon as={icon} boxSize={4} />
+            <Text fontSize="sm" fontWeight={isActive ? "650" : "500"}>
+              {label}
+            </Text>
+          </HStack>
           {badge != null && (
-            <Badge
-              position="relative"
-              zIndex={1}
-              colorScheme="red"
-              borderRadius="full"
-              fontSize="10px"
-              px={2}
-            >
+            <Badge colorScheme="red" fontSize="10px" aria-label={`${badge} need attention`}>
               {badge}
             </Badge>
           )}
-        </MotionBox>
+        </HStack>
       )}
     </NavLink>
   );

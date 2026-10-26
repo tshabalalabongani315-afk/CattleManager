@@ -1,16 +1,15 @@
 import { Box } from "@chakra-ui/react";
 
+/** The one surface style used across the app: flat, bordered, subtly raised. */
 export default function Card({ children, ...props }) {
   return (
     <Box
-      bg="rgba(255,255,255,0.65)"
-      _dark={{ bg: "rgba(22,28,25,0.6)", borderColor: "whiteAlpha.200" }}
-      backdropFilter="blur(16px) saturate(160%)"
-      p="6"
+      bg="surface"
+      p={{ base: 4, md: 6 }}
       borderRadius="xl"
       border="1px solid"
-      borderColor="blackAlpha.100"
-      boxShadow="0 4px 24px rgba(20, 30, 25, 0.06)"
+      borderColor="line"
+      boxShadow="0 1px 2px rgba(16, 24, 19, 0.04)"
       {...props}
     >
       {children}

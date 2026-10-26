@@ -1,0 +1,18 @@
+{
+  "name": "cattle-manager",
+  "private": true,
+  "type": "module",
+  "description": "Cattle Manager — herd records, vaccinations and compliance for commercial cattle owners.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:all": "npm --prefix backend ci && npm --prefix frontend ci",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix frontend run dev",
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "lint": "npm --prefix backend run lint && npm --prefix frontend run lint",
+    "build": "npm --prefix backend run migrate && npm --prefix frontend run build",
+    "install:vercel": "npm --prefix backend ci --omit=dev && npm --prefix frontend ci --include=dev"
+  }
+}

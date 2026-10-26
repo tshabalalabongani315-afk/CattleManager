@@ -1,299 +1,299 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  SimpleGrid,
-  VStack,
-  HStack,
-  Heading,
-  Text,
-  Badge,
-  Link,
-  Button,
-  Icon,
-  Box,
-} from "@chakra-ui/react";
+import { useMemo } from "react";
+import { Badge, Box, Button, Flex, Heading, HStack, Link, SimpleGrid, Skeleton, Stack, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
-import { FiList, FiBarChart2, FiRepeat, FiActivity } from "react-icons/fi";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { FiActivity, FiBarChart2, FiCheckCircle, FiPlus, FiRepeat, FiUsers } from "react-icons/fi";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
-import { api } from "../api";
+import PageHeader from "../components/ui/PageHeader";
+import StatCard from "../components/ui/StatCard";
+import EmptyState from "../components/ui/EmptyState";
+import ErrorState from "../components/ui/ErrorState";
+import { useAuth } from "../context/AuthContext";
+import { useFetch } from "../hooks/useFetch";
 import { dueStatus } from "../utils/vaccinations";
+import { formatDate } from "../utils/dates";
 import { BREED_COLORS } from "../utils/colors";
-import { parseLocalDate } from "../utils/dates";
 
-const MOVEMENT_COLOR = {
-  IN: "green",
-  OUT: "orange",
-  SOLD: "blue",
-  DIED: "red",
-};
+const MOVEMENT_COLOR = { IN: "green", OUT: "orange", SOLD: "blue", DIED: "red" };
 
-const QUICK_ACTIONS = [
-  { to: "/register", icon: FiList, label: "Register Cattle" },
-  { to: "/daily-counts", icon: FiBarChart2, label: "Log Daily Count" },
-  { to: "/movements", icon: FiRepeat, label: "Log Movement" },
-  { to: "/vaccinations", icon: FiActivity, label: "View Vaccinations" },
-];
-
-function isThisMonth(dateStr) {
-  const d = parseLocalDate(dateStr);
-  const today = new Date();
-  return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+function greeting(now = new Date()) {
+  const h = now.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export default function Dashboard() {
-  const [cattle, setCattle] = useState([]);
-  const [latestCount, setLatestCount] = useState(null);
-  const [movements, setMovements] = useState([]);
-  const [vaccinations, setVaccinations] = useState([]);
+  const { user } = useAuth();
+  const { data, loading, error, reload } = useFetch("/dashboard");
 
-  useEffect(() => {
-    api.get("/cattle").then((res) => setCattle(res.data));
-    api.get("/daily-counts").then((res) => setLatestCount(res.data[0] ?? null));
-    api.get("/movements").then((res) => setMovements(res.data));
-    api.get("/vaccinations").then((res) => setVaccinations(res.data));
-  }, []);
+  const due = useMemo(
+    () =>
+      (data?.vaccinationsDue ?? [])
+        .map((v) => ({ ...v, status: dueStatus(v.next_due_date) }))
+        .filter((v) => v.status),
+    [data]
+  );
+  const overdue = due.filter((v) => v.status.label === "Overdue").length;
 
-  const recentMovements = movements.slice(0, 5);
+  const counted = data?.latestCount?.count ?? null;
+  const diff = counted != null ? data.active - counted : null;
 
-  const monthMovements = useMemo(
-    () => movements.filter((m) => isThisMonth(m.date)),
-    [movements]
+  const month = data?.monthMovements;
+  const net = month ? month.IN - month.OUT - month.SOLD - month.DIED : null;
+
+  const header = (
+    <PageHeader
+      title={`${greeting()}${user && !user.isDemo ? `, ${user.username}` : ""}`}
+      description={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+      actions={
+        <>
+          <Button as={RouterLink} to="/daily-counts" variant="subtle" leftIcon={<FiBarChart2 />}>
+            Log count
+          </Button>
+          <Button as={RouterLink} to="/register?new=1" leftIcon={<FiPlus />}>
+            Add animal
+          </Button>
+        </>
+      }
+    />
   );
 
-  const monthTotals = useMemo(() => {
-    const totals = { IN: 0, OUT: 0, SOLD: 0, DIED: 0 };
-    monthMovements.forEach((m) => {
-      totals[m.type] = (totals[m.type] || 0) + Number(m.quantity);
-    });
-    return totals;
-  }, [monthMovements]);
-
-  const breedData = useMemo(() => {
-    const grouped = {};
-    cattle.forEach((c) => {
-      grouped[c.breed] = (grouped[c.breed] || 0) + 1;
-    });
-    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
-  }, [cattle]);
-
-  const dueVaccinations = vaccinations
-    .map((v) => ({ ...v, status: dueStatus(v.next_due_date) }))
-    .filter((v) => v.status);
-
-  const registered = cattle.length;
-  const counted = latestCount?.count != null ? Number(latestCount.count) : null;
-  const reconciliationDiff = counted != null ? registered - counted : null;
+  if (error && !data) {
+    return (
+      <PageTransition>
+        {header}
+        <Card>
+          <ErrorState error={error} onRetry={reload} title="Couldn't load your dashboard" />
+        </Card>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
-      <VStack align="stretch" spacing={6}>
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
-          <StatCard label="Registered Cattle" value={registered} />
-          <StatCard
-            label="Latest Kraal Count"
-            value={latestCount?.count}
-            hint={latestCount?.date}
-          />
-          <StatCard label="Recent Movements" value={recentMovements.length} hint="last 5" />
-        </SimpleGrid>
+      {header}
 
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={5}>
-          <Card>
-            <Heading size="sm" mb={4}>
-              Quick Actions
-            </Heading>
-            <SimpleGrid columns={2} spacing={3}>
-              {QUICK_ACTIONS.map((a) => (
-                <Button
-                  key={a.to}
-                  as={RouterLink}
-                  to={a.to}
-                  variant="outline"
-                  justifyContent="flex-start"
-                  leftIcon={<Icon as={a.icon} />}
-                  size="sm"
-                >
-                  {a.label}
-                </Button>
+      <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={{ base: 3, md: 4 }}>
+        <StatCard
+          label="Active animals"
+          icon={FiUsers}
+          loading={loading}
+          value={data?.active}
+          hint={data ? `${data.registered} on the register in total` : undefined}
+        />
+        <StatCard
+          label="Latest kraal count"
+          icon={FiBarChart2}
+          tone="blue"
+          loading={loading}
+          value={counted}
+          hint={data?.latestCount ? `Counted ${formatDate(data.latestCount.date)}` : "No count logged yet"}
+        />
+        <StatCard
+          label="Vaccinations needing attention"
+          icon={FiActivity}
+          tone={overdue > 0 ? "red" : due.length > 0 ? "orange" : "brand"}
+          loading={loading}
+          value={due.length}
+          hint={overdue > 0 ? `${overdue} overdue` : due.length > 0 ? "All due within 14 days" : "All up to date"}
+        />
+        <StatCard
+          label="Net movement this month"
+          icon={FiRepeat}
+          tone="orange"
+          loading={loading}
+          value={net == null ? null : net > 0 ? `+${net}` : net}
+          hint={month ? `${month.IN} in · ${month.OUT + month.SOLD} out · ${month.DIED} died` : undefined}
+        />
+      </SimpleGrid>
+
+      <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={4} mt={4}>
+        <Card gridColumn={{ lg: "span 2" }}>
+          <SectionTitle title="Vaccinations due" action={<Link as={RouterLink} to="/vaccinations" color="brand.fg" fontSize="sm" fontWeight="600">View all</Link>} />
+          {loading ? (
+            <Stack spacing={3}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} h="44px" borderRadius="lg" />
               ))}
-            </SimpleGrid>
-          </Card>
-
-          <Card>
-            <HStack justify="space-between" mb={4}>
-              <Heading size="sm">Herd Reconciliation</Heading>
-              <Link as={RouterLink} to="/herd" fontSize="xs" color="brand.500">
-                View details
-              </Link>
-            </HStack>
-
-            {counted == null ? (
-              <Text color="gray.500" fontSize="sm">
-                No daily count recorded yet.
-              </Text>
-            ) : (
-              <VStack align="stretch" spacing={2}>
-                <HStack justify="space-between">
-                  <Text fontSize="sm">Registered</Text>
-                  <Text fontWeight="bold">{registered}</Text>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text fontSize="sm">Counted ({latestCount.date})</Text>
-                  <Text fontWeight="bold">{counted}</Text>
-                </HStack>
-                <HStack justify="space-between">
-                  <Text fontSize="sm">Difference</Text>
-                  {reconciliationDiff === 0 ? (
-                    <Badge colorScheme="green">All accounted for</Badge>
-                  ) : (
-                    <Badge colorScheme="red">
-                      {reconciliationDiff > 0
-                        ? `${reconciliationDiff} unaccounted for`
-                        : `${-reconciliationDiff} over register`}
+            </Stack>
+          ) : due.length === 0 ? (
+            <EmptyState
+              icon={FiCheckCircle}
+              title="You're all caught up"
+              description="Nothing is overdue or due in the next two weeks."
+            />
+          ) : (
+            <Stack spacing={0} divider={<Box borderTop="1px solid" borderColor="line" />}>
+              {due.slice(0, 6).map((v) => (
+                <Flex key={v.id} py={3} gap={3} align="center" justify="space-between">
+                  <HStack spacing={3} minW={0}>
+                    <Badge colorScheme={v.status.color} flexShrink={0}>
+                      {v.status.label}
                     </Badge>
-                  )}
-                </HStack>
-              </VStack>
-            )}
-          </Card>
-        </SimpleGrid>
-
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={5}>
-          <Card>
-            <Heading size="sm" mb={2}>
-              Breed Distribution
-            </Heading>
-            {breedData.length === 0 ? (
-              <Text color="gray.500" fontSize="sm">
-                No cattle registered yet.
-              </Text>
-            ) : (
-              <HStack spacing={4} align="center">
-                <Box h="140px" w="140px" flexShrink={0}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={breedData} dataKey="value" nameKey="name" outerRadius={60}>
-                        {breedData.map((_, i) => (
-                          <Cell key={i} fill={BREED_COLORS[i % BREED_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-                <VStack align="stretch" spacing={1} fontSize="sm">
-                  {breedData.map((b, i) => (
-                    <HStack key={b.name}>
-                      <Box
-                        w="8px"
-                        h="8px"
-                        borderRadius="full"
-                        bg={BREED_COLORS[i % BREED_COLORS.length]}
-                      />
-                      <Text>
-                        {b.name} ({b.value})
+                    <Box minW={0}>
+                      <Link as={RouterLink} to={`/cattle/${v.cattle_id}`} fontWeight="600" color="brand.fg">
+                        {v.cattle_tag}
+                      </Link>
+                      <Text fontSize="sm" color="fg.muted" noOfLines={1}>
+                        {v.vaccine_name}
                       </Text>
-                    </HStack>
-                  ))}
-                </VStack>
-              </HStack>
-            )}
-          </Card>
-
-          <Card>
-            <Heading size="sm" mb={4}>
-              Movements This Month
-            </Heading>
-            <SimpleGrid columns={2} spacing={3}>
-              {Object.entries(monthTotals).map(([type, total]) => (
-                <HStack key={type} justify="space-between">
-                  <Badge colorScheme={MOVEMENT_COLOR[type]}>{type}</Badge>
-                  <Text fontWeight="bold">{total}</Text>
-                </HStack>
+                    </Box>
+                  </HStack>
+                  <Text fontSize="sm" color="fg.muted" flexShrink={0}>
+                    {formatDate(v.next_due_date)}
+                  </Text>
+                </Flex>
               ))}
-            </SimpleGrid>
-          </Card>
-        </SimpleGrid>
+            </Stack>
+          )}
+        </Card>
 
         <Card>
-          <Heading size="md" mb={4}>
-            Vaccinations Due
-          </Heading>
-
-          {dueVaccinations.length === 0 ? (
-            <Text color="gray.500">Nothing due or overdue right now.</Text>
+          <SectionTitle title="Herd reconciliation" action={<Link as={RouterLink} to="/herd" color="brand.fg" fontSize="sm" fontWeight="600">Details</Link>} />
+          {loading ? (
+            <Skeleton h="120px" borderRadius="lg" />
+          ) : counted == null ? (
+            <Text color="fg.muted" fontSize="sm">
+              Log a daily count to compare it against your register.
+            </Text>
           ) : (
-            <VStack align="stretch" spacing={3}>
-              {dueVaccinations.map((v) => (
-                <HStack key={v.id} justify="space-between">
-                  <HStack>
-                    <Badge colorScheme={v.status.color}>{v.status.label}</Badge>
-                    <Link as={RouterLink} to={`/cattle/${v.cattle_id}`} color="brand.500">
-                      {v.cattle_tag}
-                    </Link>
-                    <Text color="gray.500" fontSize="sm">
-                      {v.vaccine_name}
+            <Stack spacing={3}>
+              <Row label="On the register" value={data.active} />
+              <Row label="Counted in the kraal" value={counted} />
+              <Box pt={1}>
+                {diff === 0 ? (
+                  <Badge colorScheme="green">All accounted for</Badge>
+                ) : (
+                  <Badge colorScheme="red">
+                    {diff > 0 ? `${diff} unaccounted for` : `${-diff} over the register`}
+                  </Badge>
+                )}
+              </Box>
+            </Stack>
+          )}
+        </Card>
+      </SimpleGrid>
+
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4} mt={4}>
+        <Card>
+          <SectionTitle title="Herd by breed" />
+          {loading ? (
+            <Skeleton h="160px" borderRadius="lg" />
+          ) : data.breeds.length === 0 ? (
+            <EmptyState
+              icon={FiUsers}
+              title="No animals yet"
+              description="Add your first animal to see your herd's makeup."
+              action={
+                <Button as={RouterLink} to="/register?new=1" size="sm" leftIcon={<FiPlus />}>
+                  Add animal
+                </Button>
+              }
+            />
+          ) : (
+            <Flex align="center" gap={6} direction={{ base: "column", sm: "row" }}>
+              <Box w="170px" h="170px" flexShrink={0} role="img" aria-label="Breed distribution chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={data.breeds} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2} stroke="none">
+                      {data.breeds.map((b, i) => (
+                        <Cell key={b.name} fill={BREED_COLORS[i % BREED_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+              <Stack spacing={2} w="full">
+                {data.breeds.map((b, i) => (
+                  <HStack key={b.name} justify="space-between">
+                    <HStack spacing={2}>
+                      <Box w="10px" h="10px" borderRadius="full" bg={BREED_COLORS[i % BREED_COLORS.length]} />
+                      <Text fontSize="sm">{b.name}</Text>
+                    </HStack>
+                    <Text fontSize="sm" fontWeight="600">
+                      {b.value}
                     </Text>
                   </HStack>
-                  <Text color="gray.500" fontSize="sm">
-                    due {v.next_due_date}
-                  </Text>
-                </HStack>
-              ))}
-            </VStack>
+                ))}
+              </Stack>
+            </Flex>
           )}
         </Card>
 
         <Card>
-          <Heading size="md" mb={4}>
-            Recent Activity
-          </Heading>
-
-          {recentMovements.length === 0 ? (
-            <Text color="gray.500">No movements logged yet.</Text>
+          <SectionTitle title="Recent activity" action={<Link as={RouterLink} to="/movements" color="brand.fg" fontSize="sm" fontWeight="600">All movements</Link>} />
+          {loading ? (
+            <Stack spacing={3}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} h="40px" borderRadius="lg" />
+              ))}
+            </Stack>
+          ) : data.recentMovements.length === 0 ? (
+            <EmptyState
+              icon={FiRepeat}
+              title="No movements logged"
+              description="Record animals moving in, out, sold or died."
+              action={
+                <Button as={RouterLink} to="/movements" size="sm" variant="subtle">
+                  Log a movement
+                </Button>
+              }
+            />
           ) : (
-            <VStack align="stretch" spacing={3}>
-              {recentMovements.map((m) => (
-                <HStack key={m.id} justify="space-between">
-                  <HStack>
-                    <Badge colorScheme={MOVEMENT_COLOR[m.type] ?? "gray"}>
+            <Stack spacing={0} divider={<Box borderTop="1px solid" borderColor="line" />}>
+              {data.recentMovements.map((m) => (
+                <Flex key={m.id} py={3} gap={3} align="center" justify="space-between">
+                  <HStack spacing={3} minW={0}>
+                    <Badge colorScheme={MOVEMENT_COLOR[m.type] ?? "gray"} minW="52px" textAlign="center">
                       {m.type}
                     </Badge>
-                    <Text>{m.quantity} cattle</Text>
-                    {m.note && (
-                      <Text color="gray.500" fontSize="sm">
-                        &mdash; {m.note}
+                    <Box minW={0}>
+                      <Text fontSize="sm" fontWeight="600">
+                        {m.quantity} {m.quantity === 1 ? "animal" : "animals"}
                       </Text>
-                    )}
+                      {m.note && (
+                        <Text fontSize="xs" color="fg.muted" noOfLines={1}>
+                          {m.note}
+                        </Text>
+                      )}
+                    </Box>
                   </HStack>
-                  <Text color="gray.500" fontSize="sm">
-                    {m.date}
+                  <Text fontSize="sm" color="fg.muted" flexShrink={0}>
+                    {formatDate(m.date)}
                   </Text>
-                </HStack>
+                </Flex>
               ))}
-            </VStack>
+            </Stack>
           )}
         </Card>
-      </VStack>
+      </SimpleGrid>
     </PageTransition>
   );
 }
 
-function StatCard({ label, value, hint }) {
+function SectionTitle({ title, action }) {
   return (
-    <Card>
-      <Text fontWeight="semibold" color="gray.500" fontSize="sm">
+    <Flex justify="space-between" align="center" mb={4}>
+      <Heading as="h2" size="sm">
+        {title}
+      </Heading>
+      {action}
+    </Flex>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <HStack justify="space-between">
+      <Text fontSize="sm" color="fg.muted">
         {label}
       </Text>
-      <Text fontSize="3xl" fontWeight="bold">
-        {value ?? "—"}
+      <Text fontWeight="700" fontSize="lg">
+        {value}
       </Text>
-      {hint && (
-        <Text fontSize="xs" color="gray.500">
-          {hint}
-        </Text>
-      )}
-    </Card>
+    </HStack>
   );
 }

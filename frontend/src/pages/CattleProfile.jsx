@@ -1,162 +1,177 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
+import { useState } from "react";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Button,
-  Input,
   Badge,
-  Icon,
+  Box,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Button,
+  Flex,
+  Heading,
+  HStack,
+  SimpleGrid,
+  Skeleton,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Text,
+  useDisclosure,
 } from "@chakra-ui/react";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiEdit2, FiSearch, FiTrash2 } from "react-icons/fi";
 import Card from "../components/Card";
 import PageTransition from "../components/PageTransition";
+import CattleFormModal from "../components/CattleFormModal";
 import VaccinationHistory from "../components/VaccinationHistory";
 import WeightHistory from "../components/WeightHistory";
+import EmptyState from "../components/ui/EmptyState";
+import ErrorState from "../components/ui/ErrorState";
 import { api } from "../api";
+import { useFetch } from "../hooks/useFetch";
+import { useConfirm } from "../hooks/confirmContext";
+import { useNotify } from "../hooks/useNotify";
 import { formatAge } from "../utils/age";
+import { formatDate } from "../utils/dates";
 import { STATUS_COLORS } from "../utils/colors";
 
 export default function CattleProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const notify = useNotify();
+  const edit = useDisclosure();
+  const [removing, setRemoving] = useState(false);
 
-  const [animal, setAnimal] = useState(null);
-  const [notFound, setNotFound] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [tag, setTag] = useState("");
-  const [breed, setBreed] = useState("");
-
-  const load = async () => {
-    setNotFound(false);
-    setLoadError(false);
-    try {
-      const res = await api.get(`/cattle/${id}`);
-      setAnimal(res.data);
-      setTag(res.data.tag);
-      setBreed(res.data.breed);
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setNotFound(true);
-      } else {
-        setLoadError(true);
-      }
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, [id]);
-
-  const save = async () => {
-    if (!tag || !breed) return alert("Fill all fields");
-    await api.put(`/cattle/${id}`, { tag, breed });
-    setEditing(false);
-    load();
-  };
+  const { data: animal, loading, error, reload } = useFetch(`/cattle/${id}`);
+  const notFound = error?.response?.status === 404 || error?.response?.status === 400;
 
   const remove = async () => {
-    if (!confirm("Delete this animal? This cannot be undone.")) return;
-    await api.delete(`/cattle/${id}`);
-    navigate("/register");
+    const ok = await confirm({
+      title: `Delete ${animal.tag}?`,
+      body: "Its vaccination and weight history will be deleted too. This can't be undone.",
+      confirmLabel: "Delete animal",
+      danger: true,
+    });
+    if (!ok) return;
+    setRemoving(true);
+    try {
+      await api.delete(`/cattle/${id}`);
+      notify.success(`${animal.tag} deleted`);
+      navigate("/register", { replace: true });
+    } catch (err) {
+      notify.error(err, "Couldn't delete the animal");
+      setRemoving(false);
+    }
   };
 
   if (notFound) {
     return (
       <PageTransition>
         <Card>
-          <Text color="gray.500">Animal not found.</Text>
+          <EmptyState
+            icon={FiSearch}
+            title="Animal not found"
+            description="It may have been deleted, or the link is wrong."
+            action={
+              <Button as={RouterLink} to="/register" size="sm">
+                Back to the register
+              </Button>
+            }
+          />
         </Card>
       </PageTransition>
     );
   }
 
-  if (loadError) {
+  if (error && !animal) {
     return (
       <PageTransition>
         <Card>
-          <VStack align="start" spacing={3}>
-            <Text color="gray.500">
-              Something went wrong loading this animal. Check your connection and try again.
-            </Text>
-            <Button size="sm" onClick={load}>
-              Try again
-            </Button>
-          </VStack>
+          <ErrorState error={error} onRetry={reload} title="Couldn't load this animal" />
         </Card>
       </PageTransition>
     );
   }
 
+  const age = animal ? formatAge(animal.date_of_birth) : null;
+
   return (
     <PageTransition>
-      <VStack align="stretch" spacing={6}>
-        <Button
-          as={RouterLink}
-          to="/register"
-          variant="ghost"
-          size="sm"
-          alignSelf="flex-start"
-          leftIcon={<Icon as={FiArrowLeft} />}
-        >
-          Back to Register
-        </Button>
+      <Breadcrumb mb={4} fontSize="sm" color="fg.muted">
+        <BreadcrumbItem>
+          <BreadcrumbLink as={RouterLink} to="/register">
+            Register
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage>
+          <BreadcrumbLink href="#" aria-current="page" onClick={(e) => e.preventDefault()}>
+            {animal?.tag ?? "…"}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+      </Breadcrumb>
 
-        <Card>
-          {!animal ? (
-            <Text color="gray.500">Loading…</Text>
-          ) : editing ? (
-            <VStack align="stretch" spacing={3} maxW="360px">
-              <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="Tag Number" />
-              <Input value={breed} onChange={(e) => setBreed(e.target.value)} placeholder="Breed" />
-              <HStack>
-                <Button colorScheme="brand" onClick={save}>
-                  Save
-                </Button>
-                <Button variant="ghost" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
+      <Card>
+        {loading || !animal ? (
+          <Skeleton h="64px" borderRadius="lg" />
+        ) : (
+          <Flex justify="space-between" align={{ base: "stretch", md: "flex-start" }} gap={4} direction={{ base: "column", md: "row" }}>
+            <Box>
+              <HStack spacing={3} flexWrap="wrap">
+                <Heading as="h1" size="lg">
+                  {animal.tag}
+                </Heading>
+                <Badge colorScheme="brand">{animal.breed}</Badge>
+                <Badge colorScheme={STATUS_COLORS[animal.status] || "gray"}>{animal.status}</Badge>
               </HStack>
-            </VStack>
-          ) : (
-            <HStack justify="space-between" align="flex-start">
-              <VStack align="start" spacing={1}>
-                <HStack>
-                  <Heading size="lg">{animal.tag}</Heading>
-                  <Badge colorScheme="brand">{animal.breed}</Badge>
-                  <Badge colorScheme={STATUS_COLORS[animal.status] || "gray"}>
-                    {animal.status || "Active"}
-                  </Badge>
-                </HStack>
-                <Text color="gray.500" fontSize="sm">
-                  Animal #{animal.id}
-                  {animal.sex && ` · ${animal.sex}`}
-                  {formatAge(animal.date_of_birth) && ` · ${formatAge(animal.date_of_birth)} old`}
-                </Text>
-              </VStack>
-              <HStack>
-                <Button size="sm" onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-                <Button size="sm" colorScheme="red" variant="outline" onClick={remove}>
-                  Delete
-                </Button>
-              </HStack>
+              <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={6} mt={4}>
+                <Fact label="Sex" value={animal.sex} />
+                <Fact label="Age" value={age ? `${age} old` : null} />
+                <Fact label="Born" value={animal.date_of_birth ? formatDate(animal.date_of_birth) : null} />
+              </SimpleGrid>
+            </Box>
+            <HStack spacing={2} alignSelf={{ base: "stretch", md: "flex-start" }}>
+              <Button variant="subtle" leftIcon={<FiEdit2 />} onClick={edit.onOpen} flex={{ base: 1, md: "none" }}>
+                Edit
+              </Button>
+              <Button variant="subtle" colorScheme="red" leftIcon={<FiTrash2 />} onClick={remove} isLoading={removing} flex={{ base: 1, md: "none" }}>
+                Delete
+              </Button>
             </HStack>
-          )}
-        </Card>
+          </Flex>
+        )}
+      </Card>
 
-        <Card>
-          <VaccinationHistory cattleId={id} />
-        </Card>
+      <Card mt={4} p={{ base: 4, md: 6 }}>
+        <Tabs isLazy variant="line">
+          <TabList>
+            <Tab fontWeight="600">Vaccinations</Tab>
+            <Tab fontWeight="600">Weight</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel px={0} pt={6}>
+              <VaccinationHistory cattleId={id} />
+            </TabPanel>
+            <TabPanel px={0} pt={6}>
+              <WeightHistory cattleId={id} />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Card>
 
-        <Card>
-          <WeightHistory cattleId={id} />
-        </Card>
-      </VStack>
+      <CattleFormModal isOpen={edit.isOpen} onClose={edit.onClose} animal={animal} onSaved={reload} />
     </PageTransition>
+  );
+}
+
+function Fact({ label, value }) {
+  return (
+    <Box>
+      <Text fontSize="xs" color="fg.muted" fontWeight="600" textTransform="uppercase" letterSpacing="0.04em">
+        {label}
+      </Text>
+      <Text fontWeight="600">{value || "—"}</Text>
+    </Box>
   );
 }
