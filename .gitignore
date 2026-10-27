@@ -31,3 +31,6 @@ Thumbs.db
 
 # Local PGlite database
 .data/
+
+# Vercel CLI link
+.vercel

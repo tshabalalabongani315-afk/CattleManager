@@ -41,37 +41,43 @@ export async function createDemoAccount(db, config) {
       [username, passwordHash, config.demoTtlHours]
     );
 
-    const cattle = [];
-    for (const a of HERD) {
-      const [row] = await t.query(
-        `INSERT INTO cattle (user_id, tag, breed, sex, date_of_birth, status)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [user.id, a.tag, a.breed, a.sex, a.dob, a.status]
-      );
-      cattle.push({ ...a, id: row.id });
-    }
-
+    // Each table is seeded with ONE multi-row insert. Row-at-a-time inserts meant
+    // ~150 network round trips to the database, which timed out on serverless.
+    const cattleRows = await t.query(
+      ...multiInsert(
+        "cattle",
+        ["user_id", "tag", "breed", "sex", "date_of_birth", "status"],
+        HERD.map((a) => [user.id, a.tag, a.breed, a.sex, a.dob, a.status]),
+        "id"
+      )
+    );
+    const cattle = HERD.map((a, i) => ({ ...a, id: cattleRows[i].id }));
     const active = cattle.filter((c) => c.status === "Active");
+
+    const vaccinations = [];
+    const weights = [];
     for (const [i, animal] of active.entries()) {
       // Mostly healthy, with a handful overdue / due soon so the alerts have something to show.
       const [vaccine, intervalDays] = VACCINES[i % VACCINES.length];
       const dueOffset = [210, 95, -9, 140, 60, 8, 260, 175, 110, 75, 230, -3, 120, 190, 12, 85][i % 16];
-      await t.query(
-        `INSERT INTO vaccinations (cattle_id, vaccine_name, date_given, next_due_date, notes)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [animal.id, vaccine, addDays(dueOffset - intervalDays), addDays(dueOffset), i % 4 === 0 ? "Batch checked by vet" : null]
-      );
+      vaccinations.push([
+        animal.id,
+        vaccine,
+        addDays(dueOffset - intervalDays),
+        addDays(dueOffset),
+        i % 4 === 0 ? "Batch checked by vet" : null,
+      ]);
 
       // Four weigh-ins per animal with realistic growth.
       const base = 180 + (i % 6) * 22;
       for (let w = 0; w < 4; w++) {
-        await t.query("INSERT INTO weights (cattle_id, date, weight_kg) VALUES ($1, $2, $3)", [
-          animal.id,
-          addDays(-(90 - w * 30)),
-          base + w * (24 + (i % 5)),
-        ]);
+        weights.push([animal.id, addDays(-(90 - w * 30)), base + w * (24 + (i % 5))]);
       }
     }
+    await t.query(
+      ...multiInsert("vaccinations", ["cattle_id", "vaccine_name", "date_given", "next_due_date", "notes"], vaccinations)
+    );
+    await t.query(...multiInsert("weights", ["cattle_id", "date", "weight_kg"], weights));
 
     const movements = [
       ["IN", 6, "New heifers from Ladybrand auction", -26],
@@ -79,24 +85,35 @@ export async function createDemoAccount(db, config) {
       ["OUT", 2, "Moved to northern camp", -12],
       ["DIED", 1, "Snake bite", -8],
       ["IN", 4, "Purchased breeding stock", -3],
-    ];
-    for (const [type, quantity, note, offset] of movements) {
-      await t.query(
-        "INSERT INTO movements (user_id, type, quantity, note, date) VALUES ($1, $2, $3, $4, $5)",
-        [user.id, type, quantity, note, addDays(offset)]
-      );
-    }
+    ].map(([type, quantity, note, offset]) => [user.id, type, quantity, note, addDays(offset)]);
+    await t.query(...multiInsert("movements", ["user_id", "type", "quantity", "note", "date"], movements));
 
     const activeCount = active.length;
-    const counts = [activeCount + 1, activeCount, activeCount, activeCount - 1, activeCount];
-    for (const [i, count] of counts.entries()) {
-      await t.query("INSERT INTO daily_counts (user_id, date, count) VALUES ($1, $2, $3)", [
-        user.id,
-        addDays(-(counts.length - 1 - i) * 2),
-        count,
-      ]);
-    }
+    const counts = [activeCount + 1, activeCount, activeCount, activeCount - 1, activeCount].map((count, i, all) => [
+      user.id,
+      addDays(-(all.length - 1 - i) * 2),
+      count,
+    ]);
+    await t.query(...multiInsert("daily_counts", ["user_id", "date", "count"], counts));
 
     return user;
   });
+}
+
+/** Builds `INSERT ... VALUES (...), (...)` plus its parameter list for a multi-row insert. */
+function multiInsert(table, columns, rows, returning) {
+  const params = [];
+  const tuples = rows.map(
+    (row) =>
+      `(${row
+        .map((value) => {
+          params.push(value);
+          return `$${params.length}`;
+        })
+        .join(", ")})`
+  );
+  const sql = `INSERT INTO ${table} (${columns.join(", ")}) VALUES ${tuples.join(", ")}${
+    returning ? ` RETURNING ${returning}` : ""
+  }`;
+  return [sql, params];
 }
