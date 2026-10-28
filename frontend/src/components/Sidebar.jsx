@@ -17,6 +17,9 @@ import ColorModeToggle from "./ColorModeToggle";
 import { api, DATA_CHANGED_EVENT } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { dueStatus } from "../utils/vaccinations";
+import { useConfirm } from "../hooks/confirmContext";
+import { useSyncStatus } from "../hooks/useSyncStatus";
+import InstallButton from "./InstallButton";
 
 const NAV = [
   {
@@ -62,9 +65,20 @@ function useAttentionCount() {
 export default function Sidebar({ onNavigate }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const attention = useAttentionCount();
+  const { pending } = useSyncStatus();
 
   const handleLogout = async () => {
+    if (pending > 0) {
+      const ok = await confirm({
+        title: "Sign out with changes waiting?",
+        body: `${pending} ${pending === 1 ? "change is" : "changes are"} saved on this device but haven't uploaded yet. They stay here and upload the next time you sign in on this device.`,
+        confirmLabel: "Sign out anyway",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     await logout();
     navigate("/", { replace: true });
   };
@@ -114,6 +128,7 @@ export default function Sidebar({ onNavigate }) {
             </Text>
           </Box>
         )}
+        <InstallButton />
         <HStack justify="space-between">
           <HStack
             as="button"
