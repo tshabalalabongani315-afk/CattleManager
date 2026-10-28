@@ -82,7 +82,14 @@ export async function createApp({ config = loadConfig(), db } = {}) {
       const limits = await db.query(
         "DELETE FROM rate_limits WHERE window_start < now() - interval '1 day' RETURNING key"
       );
-      res.json({ expiredDemoAccountsRemoved: demos.length, rateLimitRowsRemoved: limits.length });
+      const keys = await db.query(
+        "DELETE FROM idempotency_keys WHERE created_at < now() - interval '2 days' RETURNING idem_key"
+      );
+      res.json({
+        expiredDemoAccountsRemoved: demos.length,
+        rateLimitRowsRemoved: limits.length,
+        idempotencyKeysRemoved: keys.length,
+      });
     })
   );
 

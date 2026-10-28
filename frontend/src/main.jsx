@@ -6,6 +6,9 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import ConfirmProvider from "./components/ui/ConfirmProvider";
 import theme from "./theme";
+import { setupServiceWorker } from "./offline/registerSW";
+
+setupServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <ChakraProvider theme={theme}>

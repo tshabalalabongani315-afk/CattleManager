@@ -13,6 +13,7 @@ A secure herd-management app for commercial cattle owners: keep the register, va
 - **Movements** — animals in, out, sold or died, with notes and a monthly summary.
 - **Reports** — breed, sex and status breakdowns; CSV exports; full-data JSON export.
 - **Accounts** — sign up, change password, export all your data, delete your account.
+- **Installable and works offline** — add it to a phone's home screen; open it, read the herd and record counts, weights, vaccinations, movements and new animals with no signal. Changes upload automatically when the connection returns (see [Offline and install](#offline-and-install)).
 - **Responsive, accessible UI** — works on a phone, light and dark themes, keyboard friendly, respects reduced motion.
 
 ## Tech stack
@@ -47,6 +48,19 @@ frontend/
   src/          pages/, components/, hooks/, context/, utils/
 vercel.json     build, rewrites, cron and static-site security headers
 ```
+
+## Offline and install
+
+Connectivity on a farm is unreliable, so the app is a PWA that keeps working without it.
+
+- **Install** — Chrome/Edge/Android show an **Install app** button in the sidebar; on iPhone it explains *Share → Add to Home Screen*. The app shell (HTML, JS, CSS, Latin fonts, icons) is precached by a service worker (`vite-plugin-pwa`), about 1.2 MB uncompressed on first install. New versions wait for the user to tap **Update now**, so a deploy never reloads the page mid-entry.
+- **Local copy** — after sign-in the app downloads the whole farm in one request (`GET /api/sync/snapshot`) and keeps it in IndexedDB, scoped to the signed-in user. With no signal, reads (register, profiles, weights, counts, vaccinations, even the dashboard figures) are answered from that copy.
+- **Offline writes** — adding or editing animals and recording counts, movements, weights and vaccinations (and deleting any of them) works with no signal. Each change is applied to the local copy immediately and queued; the queue uploads in order when the connection returns, then the local copy is refreshed from the server. Animals created offline get temporary ids, and anything recorded against them is re-pointed at the real id on upload.
+- **No double-counting** — every upload carries an `Idempotency-Key`. The server stores the first response per key (`idempotency_keys`, cleaned nightly) and replays it for a repeat, so a reply lost on a bad connection can't create a duplicate. A key in flight returns `409` with `Retry-After`; a stuck claim is taken over after 60 s.
+- **Conflicts and failures** — a queued change the server rejects (for example a tag someone else already used) never blocks the rest; it is listed in the banner with a **Dismiss** button. Deleting something already gone counts as done.
+- **Safety** — signing out removes the local copy from the device but keeps changes that haven't uploaded (and asks first); they upload the next time the same person signs in. Two accounts on one device never see each other's data. Deleting the account discards its queue.
+
+Where the code lives: `frontend/src/offline/` (`controller.js` is the adapter/queue, `replica.js` the pure data logic, `storage.js` IndexedDB), `backend/src/idempotency.js`, and `GET /api/sync/snapshot` in `backend/src/routes/herd.js`. To try the service worker locally, use a production build (`npm --prefix frontend run build && npm --prefix frontend run preview`); it is disabled under `npm run dev:web`.
 
 ## Security model
 
@@ -122,6 +136,7 @@ All routes are under `/api`; everything except `auth`, `health` and `cron` requi
 | `GET/POST /daily-counts` · `DELETE /daily-counts/:id` | Kraal counts |
 | `GET/POST /movements` · `DELETE /movements/:id` | Movements |
 | `GET /dashboard` | Dashboard summary in one call |
+| `GET /sync/snapshot` | The whole farm (animals, counts, movements, vaccinations, weights) for the offline copy |
 | `POST /account/password` · `GET /account/export` · `DELETE /account` | Account self-service |
 | `GET /health` · `GET /cron/cleanup` | Health check · cron-only cleanup |
 
@@ -129,6 +144,6 @@ Errors are JSON: `{ "error": "message", "details": [{ "field", "message" }] }`.
 
 ## Testing
 
-- **Backend (67 tests)** — auth and sessions, rate limiting, validation and crash-resistance, security headers, CSRF guard, production cookie flags, config safety, demo lifecycle, and a **cross-account isolation suite** covering every resource.
-- **Frontend (25 tests)** — date/age/vaccination logic, CSV injection protection, and the sign-in form.
+- **Backend (80 tests)** — auth and sessions, rate limiting, validation and crash-resistance, security headers, CSRF guard, production cookie flags, config safety, demo lifecycle, idempotent retries (replay, concurrency, abandoned claims, cleanup), the offline snapshot, and a **cross-account isolation suite** covering every resource.
+- **Frontend (66 tests)** — date/age/vaccination logic, CSV injection protection, the sign-in form, and the **offline layer**: local-copy logic and dashboard figures, queued writes, in-order upload, temporary-id remapping, lost-reply retries, rejected changes, session expiry and two accounts sharing a device.
 - **CI** — every push and pull request runs lint, tests, build and `npm audit` (see `.github/workflows/ci.yml`).

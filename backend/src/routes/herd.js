@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { notFound, wrap } from "../http.js";
+import { idempotency } from "../idempotency.js";
 import {
   validate,
   idParams,
@@ -18,6 +19,17 @@ import {
 const CATTLE_COLS = "id, tag, breed, sex, date_of_birth, status";
 const today = () => new Date().toISOString().slice(0, 10);
 
+// Shared by the list endpoints and the offline snapshot so the two can't drift apart.
+const SQL_CATTLE = `SELECT ${CATTLE_COLS} FROM cattle WHERE user_id = $1 ORDER BY tag`;
+const SQL_COUNTS = "SELECT id, date, count FROM daily_counts WHERE user_id = $1 ORDER BY date DESC, id DESC";
+const SQL_MOVEMENTS = `SELECT id, type, quantity, note, date FROM movements
+                       WHERE user_id = $1 ORDER BY date DESC, id DESC`;
+const SQL_VACCINATIONS = (where) => `SELECT v.id, v.cattle_id, c.tag AS cattle_tag, v.vaccine_name,
+                  v.date_given, v.next_due_date, v.notes
+           FROM vaccinations v JOIN cattle c ON c.id = v.cattle_id
+           WHERE ${where}
+           ORDER BY v.next_due_date ASC NULLS LAST, v.id DESC`;
+
 /**
  * All farm-data routes. Every query is scoped to req.user.id (directly, or
  * through the owning cattle row), and a resource that exists but belongs to
@@ -25,6 +37,9 @@ const today = () => new Date().toISOString().slice(0, 10);
  */
 export function herdRoutes({ db }) {
   const router = Router();
+
+  // Lets the app safely re-send a queued POST (no-op without the header).
+  router.use(idempotency(db));
 
   const ownsCattle = async (cattleId, userId) => {
     const [row] = await db.query("SELECT 1 AS ok FROM cattle WHERE id = $1 AND user_id = $2", [
@@ -39,11 +54,7 @@ export function herdRoutes({ db }) {
   router.get(
     "/cattle",
     wrap(async (req, res) => {
-      res.json(
-        await db.query(`SELECT ${CATTLE_COLS} FROM cattle WHERE user_id = $1 ORDER BY tag`, [
-          req.user.id,
-        ])
-      );
+      res.json(await db.query(SQL_CATTLE, [req.user.id]));
     })
   );
 
@@ -114,12 +125,7 @@ export function herdRoutes({ db }) {
   router.get(
     "/daily-counts",
     wrap(async (req, res) => {
-      res.json(
-        await db.query(
-          "SELECT id, date, count FROM daily_counts WHERE user_id = $1 ORDER BY date DESC, id DESC",
-          [req.user.id]
-        )
-      );
+      res.json(await db.query(SQL_COUNTS, [req.user.id]));
     })
   );
 
@@ -154,13 +160,7 @@ export function herdRoutes({ db }) {
   router.get(
     "/movements",
     wrap(async (req, res) => {
-      res.json(
-        await db.query(
-          `SELECT id, type, quantity, note, date FROM movements
-           WHERE user_id = $1 ORDER BY date DESC, id DESC`,
-          [req.user.id]
-        )
-      );
+      res.json(await db.query(SQL_MOVEMENTS, [req.user.id]));
     })
   );
 
@@ -204,16 +204,7 @@ export function herdRoutes({ db }) {
         params.push(cattle_id);
         where += " AND v.cattle_id = $2";
       }
-      res.json(
-        await db.query(
-          `SELECT v.id, v.cattle_id, c.tag AS cattle_tag, v.vaccine_name,
-                  v.date_given, v.next_due_date, v.notes
-           FROM vaccinations v JOIN cattle c ON c.id = v.cattle_id
-           WHERE ${where}
-           ORDER BY v.next_due_date ASC NULLS LAST, v.id DESC`,
-          params
-        )
-      );
+      res.json(await db.query(SQL_VACCINATIONS(where), params));
     })
   );
 
@@ -291,6 +282,31 @@ export function herdRoutes({ db }) {
       );
       if (rows.length === 0) throw notFound();
       res.sendStatus(204);
+    })
+  );
+
+  /* ---- offline snapshot: the whole herd in one request ---- */
+
+  // The app keeps a local copy so it works without signal. One request (instead
+  // of one per animal) keeps the data cost low on a mobile connection.
+  router.get(
+    "/sync/snapshot",
+    wrap(async (req, res) => {
+      const uid = req.user.id;
+      const [cattle, dailyCounts, movements, vaccinations, weights] = await Promise.all([
+        db.query(SQL_CATTLE, [uid]),
+        db.query(SQL_COUNTS, [uid]),
+        db.query(SQL_MOVEMENTS, [uid]),
+        db.query(SQL_VACCINATIONS("c.user_id = $1"), [uid]),
+        db.query(
+          `SELECT w.id, w.cattle_id, w.date, w.weight_kg
+           FROM weights w JOIN cattle c ON c.id = w.cattle_id
+           WHERE c.user_id = $1
+           ORDER BY w.cattle_id, w.date ASC, w.id ASC`,
+          [uid]
+        ),
+      ]);
+      res.json({ cattle, dailyCounts, movements, vaccinations, weights });
     })
   );
 
