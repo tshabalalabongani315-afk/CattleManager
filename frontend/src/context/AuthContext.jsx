@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api, SESSION_EXPIRED_EVENT } from "../api";
+import { api, offline, SESSION_EXPIRED_EVENT } from "../api";
 
 const AuthContext = createContext(null);
 
@@ -34,6 +34,8 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => {
     const authenticate = async (path, body) => {
       const res = await api.post(path, body);
+      // Load this person's offline copy and queue (and upload anything still waiting).
+      await offline.setUser(res.data.user);
       setState({ status: "authed", user: res.data.user });
       return res.data.user;
     };
@@ -47,10 +49,16 @@ export function AuthProvider({ children }) {
         try {
           await api.post("/auth/logout");
         } finally {
+          // Takes the farm's data off this device (changes not yet uploaded are kept for next sign-in).
+          offline.signOut();
           setState(SIGNED_OUT);
         }
       },
-      clear: () => setState(SIGNED_OUT),
+      // The account no longer exists, so nothing queued for it can ever be uploaded.
+      clear: () => {
+        offline.forget();
+        setState(SIGNED_OUT);
+      },
     };
   }, [state]);
 
