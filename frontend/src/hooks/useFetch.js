@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { api } from "../api";
+import { api, SYNC_COMPLETE_EVENT } from "../api";
 
 /**
  * GET helper with loading / error / reload built in.
@@ -34,6 +34,12 @@ export function useFetch(url, params, { enabled = true } = {}) {
   }, [url, paramsKey, requestKey, enabled]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
+
+  // Changes made offline have just reached the server: show the real records.
+  useEffect(() => {
+    window.addEventListener(SYNC_COMPLETE_EVENT, reload);
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, reload);
+  }, [reload]);
 
   return {
     data: result.data,
