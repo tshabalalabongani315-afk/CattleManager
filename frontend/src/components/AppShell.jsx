@@ -15,6 +15,7 @@ import {
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { FiMenu } from "react-icons/fi";
 import Sidebar from "./Sidebar";
+import SyncBanner from "./SyncBanner";
 import Logo from "./Logo";
 import ColorModeToggle from "./ColorModeToggle";
 import { useAuth } from "../context/AuthContext";
@@ -106,6 +107,7 @@ export default function AppShell({ children }) {
         </HStack>
 
         {user?.isDemo && <DemoBanner expiresAt={user.expiresAt} />}
+        <SyncBanner />
 
         <Box as="main" id="main" tabIndex={-1} flex="1" px={{ base: 4, md: 8 }} py={{ base: 5, md: 8 }}>
           <Box maxW="1180px" mx="auto">
